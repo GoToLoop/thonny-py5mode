@@ -1,16 +1,9 @@
 '''thonny-py5mode frontend
 interacts with py5mode backend (backend > py5_imported_mode_backend.py)'''
 
-from email.policy import default
-import pathlib
-import site
-import subprocess
-import sys
-import types
-import webbrowser
+import pathlib, site, subprocess, sys, types, webbrowser
 
 from os import path, environ as env
-
 from typing import NamedTuple
 
 from distutils.sysconfig import get_python_lib
@@ -26,8 +19,6 @@ from thonny.shell import BaseShellText
 from .about_plugin import add_about_py5mode_command
 from .install_jdk import install_jdk, WORKBENCH
 
-from thonny import get_sys_path_directory_containg_plugins
-
 # Modified tkColorPicker (by j4321) to work with Thonny for MacOS:
 # https://GitHub.com/tabreturn/thonny-py5mode-tkcolorpicker
 # Now vendored on this very repo:
@@ -35,13 +26,13 @@ from .py5colorpicker.tkcolorpicker import modeless_colorpicker
 
 _PY5_IMPORTED_MODE = 'run.py5_imported_mode'
 
-_MENU = NamedTuple('Py5Menu', (
+_MENU = NamedTuple('Py5Menu', ( # define all fields as type str
     ('TOGGLE_PY5', str),
     ('P5_THEME', str),
     ('COLOR_PICKER', str),
     ('PY5_REF', str),
     ('PY5_PDF', str),
-    ('SKETCH_DIR', str)))(*map(tr, (
+    ('SKETCH_DIR', str)))(*map(tr, ( # immediately invoked instantiation
         'Imported mode for py5',
         'Apply recommended py5 settings',
         'Color selector',
