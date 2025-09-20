@@ -25,7 +25,7 @@ from .install_jdk import install_jdk, WORKBENCH
 from .py5colorpicker.tkcolorpicker import modeless_colorpicker
 
 class BackendEvtMsg(BackendEvent, InputSubmission):
-    '''Type hint only: combines `BackendEvent` with `InputSubmission` to indicate
+    '''Type hint only: combines `BackendEvent` + `InputSubmission` to indicate
     that the former has been instantiated with an additional `data: str` field.
 
     This class adds no behavior or structure beyond typing. It exists solely to
