@@ -257,12 +257,15 @@ def patched_handle_program_output(self: BaseShellText, msg: BackendEvtMsg):
     '''Catch display window movements and write coords. to the config file'''
 
     # If not a window move event, forward the message to the original function,
-    # so it prints the rest of the shell output as usual:
+    # so it logs the rest of the shell output as usual:
     if not msg.data.startswith('__MOVE__ '):
         return getattr(self, 'original_handle_program_output')(msg)
 
     # Write display window location to config file:
     if len(py5_loc := msg.data[9:-1].split()) == 2:
+        # Coordinates are extracted from the message and saved as a CSV string
+        # under the PY5_LOCATION run key, so it can be used as Processing's
+        # initial canvas location.
         WORKBENCH.set_option(PY5_LOCATION, ','.join(py5_loc))
 
 
