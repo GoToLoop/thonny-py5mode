@@ -36,13 +36,13 @@ class BackendEvtMsg(BackendEvent, InputSubmission):
 PY5_IMPORTED_MODE = 'run.py5_imported_mode'
 PY5_LOCATION = 'run.py5_location'
 
-_MENU = NamedTuple('Py5Menu', ( # define all fields as type str
+_MENU = NamedTuple('Py5Menu', ( # Define all fields as type str
     ('TOGGLE_PY5', str),
     ('P5_THEME', str),
     ('COLOR_PICKER', str),
     ('PY5_REF', str),
     ('PY5_PDF', str),
-    ('SKETCH_DIR', str)))(*map(tr, ( # immediately invoked instantiation
+    ('SKETCH_DIR', str)))(*map(tr, ( # Immediately invoked instantiation
         'Imported mode for py5',
         'Apply recommended py5 settings',
         'Color selector',
@@ -69,8 +69,8 @@ _GIT_RAW = _HTTP + 'raw.GitHubUserContent.com/'
 _REF_PDF = _PY5_SITE + '/thonny-py5mode/main/assets/py5_quick_reference.pdf'
 _OPEN_PDF = _GIT_RAW + _REF_PDF
 
-def _open_ref(): webbrowser.open(_OPEN_REF)
-def _open_pdf(): webbrowser.open(_OPEN_PDF)
+def _open_ref(): webbrowser.open(_OPEN_REF) # Opens online py5 API reference
+def _open_pdf(): webbrowser.open(_OPEN_PDF) # Opens online py5 PDF cheatsheet
 
 _is_color_selector_open = False
 
@@ -124,8 +124,7 @@ def execute_imported_mode() -> None:
         py5_switches = "--py5_options external"
         # Retrieve last display window location:
         py5_loc = WORKBENCH.get_option(PY5_LOCATION)
-        if py5_loc:
-            # Add location switch to command line:
+        if py5_loc: # Add location switch to command line:
             py5_switches += " location=" + ",".join(map(str, py5_loc))
 
         # Run command to execute sketch:
@@ -146,11 +145,13 @@ def patch_token_coloring() -> None:
     '''Add py5 keywords to syntax highlighting'''
 
     spec = util.find_spec("py5_tools")
+
     # Cannot use `dir(py5)` because of jvm check, hence direct loading:
     path = pathlib.Path(spec.submodule_search_locations[0]) / "reference.py"
     loader = machinery.SourceFileLoader("py5_tools_reference", str(path))
     module = types.ModuleType(loader.name)
     loader.exec_module(module)
+
     # Add keywords to thonny builtin list:
     patched_builtinlist = token_utils._builtinlist + module.PY5_ALL_STR
     matches = token_utils.matches_any("builtin", patched_builtinlist)
@@ -200,7 +201,7 @@ def color_selector() -> None:
 
     global _is_color_selector_open
 
-    if not _is_color_selector_open: # if one is not already open...
+    if not _is_color_selector_open: # If one is not already open...
         _is_color_selector_open = True
         modeless_colorpicker(title=_MENU.COLOR_PICKER)
         _is_color_selector_open = False
@@ -235,13 +236,15 @@ def show_sketch_folder() -> None:
     except AttributeError:
         showerror("Editor is empty", "Do you have a file open in the editor?")
         return
+
     # Check if the file isn't an <untitled> (yet to be saved) file:
     try:
         path_dir = path.dirname(filename)
     except TypeError:
         showerror("File not found", "Have you saved your file somewhere yet?")
         return
-    # Open file manager for mac/linux/windows:
+
+    # Open file manager for Mac/Linux/Windows:
     if sys.platform == "darwin":
         subprocess.Popen(["open", path_dir])
     elif sys.platform == "linux":
