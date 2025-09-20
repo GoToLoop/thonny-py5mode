@@ -75,15 +75,18 @@ def _open_pdf(): webbrowser.open(_OPEN_PDF)
 _is_color_selector_open = False
 
 def apply_recommended_py5_config() -> None:
-    '''Apply some recommended settings for thonny py5 work'''
+    '''Apply some recommended py5 theme, syntax and settings for Thonny'''
 
-    WORKBENCH.set_option("view.ui_theme", "Kyanite UI")
-    WORKBENCH.set_option("view.syntax_theme", "Kyanite Syntax")
-    WORKBENCH.set_option("view.highlight_current_line", "True")
-    WORKBENCH.set_option("view.locals_highlighting", "True")
-    WORKBENCH.set_option("assistance.open_assistant_on_errors", "False")
-    WORKBENCH.set_option("view.assistantview", False)
-    WORKBENCH.hide_view("AssistantView")
+    WORKBENCH.set_option('view.ui_theme', 'Kyanite UI')
+    WORKBENCH.set_option('view.syntax_theme', 'Kyanite Syntax')
+
+    WORKBENCH.set_option('view.highlight_current_line', True)
+    WORKBENCH.set_option('view.locals_highlighting', True)
+
+    WORKBENCH.set_option('assistance.open_assistant_on_errors', False)
+    WORKBENCH.set_option('view.assistantview', False)
+    WORKBENCH.hide_view('AssistantView')
+
     WORKBENCH.reload_themes()
 
 
