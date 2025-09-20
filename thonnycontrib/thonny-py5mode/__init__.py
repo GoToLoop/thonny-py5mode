@@ -11,7 +11,7 @@ from importlib import machinery, util
 from tkinter.messagebox import showerror, showinfo
 
 from thonny import get_runner, editors, running, token_utils
-from thonny.common import InputSubmission
+from thonny.common import BackendEvent, InputSubmission
 from thonny.languages import tr
 from thonny.running import Runner
 from thonny.shell import BaseShellText
@@ -24,7 +24,17 @@ from .install_jdk import install_jdk, WORKBENCH
 # Now vendored on this very repo:
 from .py5colorpicker.tkcolorpicker import modeless_colorpicker
 
-_PY5_IMPORTED_MODE = 'run.py5_imported_mode'
+class BackendEvtMsg(BackendEvent, InputSubmission):
+    '''Type hint only: combines BackendEvent with InputSubmission to indicate
+    that the former has been instantiated with an additional 'data: str' field.
+
+    This class adds no behavior or structure beyond typing. It exists solely to
+    help static analysis tools recognize that a BackendEvent instance includes
+    both BackendEvent attributes and a 'data' field of type string.'''
+
+
+PY5_IMPORTED_MODE = 'run.py5_imported_mode'
+PY5_LOCATION = 'run.py5_location'
 
 _MENU = NamedTuple('Py5Menu', ( # define all fields as type str
     ('TOGGLE_PY5', str),
@@ -50,7 +60,7 @@ NamedTuple containing UI translated labels for plugin py5mode related features:
 
 _TITLE, _MSG = map(tr, ('py5 Conversion', 'Conversion complete'))
 
-EXTS = 'py', 'py5', 'pyde'
+_EXTS = 'py', 'py5', 'pyde'
 
 _HTTP, _PY5_SITE, _REF = 'https://', 'py5Coding', '.org/reference/'
 _OPEN_REF = _HTTP + _PY5_SITE + _REF
@@ -88,7 +98,7 @@ def execute_imported_mode() -> None:
         editors.Editor.save_file(current_editor)
         current_file = current_editor.get_filename()
 
-    if current_file and current_file.split(".")[-1] in EXTS:
+    if current_file and current_file.split(".")[-1] in _EXTS:
         # Save and run py5 imported mode:
         current_editor.save_file()
         user_packages = str(site.getusersitepackages())
@@ -110,7 +120,7 @@ def execute_imported_mode() -> None:
         # Set switch so Sketch will report window location:
         py5_switches = "--py5_options external"
         # Retrieve last display window location:
-        py5_loc = WORKBENCH.get_option("run.py5_location")
+        py5_loc = WORKBENCH.get_option(PY5_LOCATION)
         if py5_loc:
             # Add location switch to command line:
             py5_switches += " location=" + ",".join(map(str, py5_loc))
@@ -151,11 +161,11 @@ def set_py5_imported_mode() -> None:
     if WORKBENCH.in_simple_mode():
         env["PY5_IMPORTED_MODE"] = "auto"
     else:
-        p_i_m = str(WORKBENCH.get_option(_PY5_IMPORTED_MODE))
+        p_i_m = str(WORKBENCH.get_option(PY5_IMPORTED_MODE))
         env["PY5_IMPORTED_MODE"] = p_i_m
 
         # Switch on/off py5 run button behavior:
-        if WORKBENCH.get_option(_PY5_IMPORTED_MODE):
+        if WORKBENCH.get_option(PY5_IMPORTED_MODE):
             Runner._original_execute_current = Runner.execute_current
             Runner.execute_current = patched_execute_current
             # Must restart backend for py5 autocompletion upon installing JDK:
@@ -176,7 +186,7 @@ def set_py5_imported_mode() -> None:
 def toggle_py5_imported_mode() -> None:
     '''Toggle py5 imported mode settings'''
 
-    var = WORKBENCH.get_variable(_PY5_IMPORTED_MODE)
+    var = WORKBENCH.get_variable(PY5_IMPORTED_MODE)
     var.set(not var.get())
     install_jdk()
     set_py5_imported_mode()
@@ -204,7 +214,7 @@ def convert_code(translator) -> None:
         editors.Editor.save_file(current_editor)
         current_file = current_editor.get_filename()
 
-    if current_file and current_file.split(".")[-1] in EXTS:
+    if current_file and current_file.split(".")[-1] in _EXTS:
         # Save and run perform conversion:
         current_editor.save_file()
         translator.translate_file(current_file, current_file)
@@ -237,37 +247,34 @@ def show_sketch_folder() -> None:
         subprocess.Popen(["explorer", path_dir])
 
 
-def patched_handle_program_output(self: BaseShellText, msg: InputSubmission):
+def patched_handle_program_output(self: BaseShellText, msg: BackendEvtMsg):
     '''Catch display window movements and write coords. to the config file'''
 
     # If not a window move event, forward the message to the original function,
     # so it prints the rest of the shell output as usual:
-    if not msg.data.startswith('__MOVE__'):
+    if not msg.data.startswith('__MOVE__ '):
         return getattr(self, 'original_handle_program_output')(msg)
 
-    py5_loc = msg.data[9:-1].split()
-
     # Write display window location to config file:
-    if len(py5_loc) == 2:
-        py5_loc = py5_loc[0] + ',' + py5_loc[1]
-        WORKBENCH.set_option('run.py5_location', py5_loc)
+    if len(py5_loc := msg.data[9:-1].split()) == 2:
+        WORKBENCH.set_option(PY5_LOCATION, ','.join(py5_loc))
 
 
 def load_plugin() -> None:
     '''Thonny's plugin callback'''
 
-    WORKBENCH.set_default(_PY5_IMPORTED_MODE, False)
+    WORKBENCH.set_default(PY5_IMPORTED_MODE, False)
 
     cmd = WORKBENCH.add_command
 
     cmd('toggle_py5_imported_mode', 'py5', _MENU.TOGGLE_PY5,
-        toggle_py5_imported_mode, flag_name=_PY5_IMPORTED_MODE, group=10)
+        toggle_py5_imported_mode, flag_name=PY5_IMPORTED_MODE, group=10)
 
     cmd('apply_recommended_py5_config', 'py5', _MENU.P5_THEME,
         apply_recommended_py5_config, group=20)
 
     cmd('py5_color_selector', 'py5', _MENU.COLOR_PICKER,
-        color_selector, group=30, default_sequence='<Alt-c>')
+        color_selector, group=25, default_sequence='<Alt-c>')
 
     cmd('py5_reference', 'py5', _MENU.PY5_REF, _open_ref, group=30)
 
