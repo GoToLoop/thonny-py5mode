@@ -300,8 +300,8 @@ def load_plugin() -> None:
     patch_token_coloring()
     set_py5_imported_mode()
 
-    # Note that _handle_program_output() is not a public API!
-    # May need to treat different Thonny versions differently:
+    # Monkey-patching internal method `_handle_program_output()`!
+    # It's a non-public API, so its handling may vary across Thonny versions:
     h_p_o = BaseShellText._handle_program_output
     setattr(BaseShellText, 'original_handle_program_output', h_p_o)
     BaseShellText._handle_program_output = patched_handle_program_output
