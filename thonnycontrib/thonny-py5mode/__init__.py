@@ -104,38 +104,38 @@ def execute_imported_mode() -> None:
         editors.Editor.save_file(current_editor)
         current_file = current_editor.get_filename()
 
-    if current_file and current_file.split(".")[-1] in _EXTS:
+    if current_file and current_file.split('.')[-1] in _EXTS:
         # Save and run py5 imported mode:
         current_editor.save_file()
         user_packages = str(site.getusersitepackages())
         site_packages = str(site.getsitepackages()[0])
-        plug_packages = util.find_spec("py5_tools").submodule_search_locations
+        plug_packages = util.find_spec('py5_tools').submodule_search_locations
         run_sketch_locations = [
-            pathlib.Path(user_packages + "/py5_tools/tools/run_sketch.py"),
-            pathlib.Path(site_packages + "/py5_tools/tools/run_sketch.py"),
-            pathlib.Path(plug_packages[0] + "/tools/run_sketch.py"),
-            pathlib.Path(get_python_lib() + "/py5_tools/tools/run_sketch.py"),
+            pathlib.Path(user_packages + '/py5_tools/tools/run_sketch.py'),
+            pathlib.Path(site_packages + '/py5_tools/tools/run_sketch.py'),
+            pathlib.Path(plug_packages[0] + '/tools/run_sketch.py'),
+            pathlib.Path(get_python_lib() + '/py5_tools/tools/run_sketch.py'),
         ]
 
         for location in run_sketch_locations:
             # If location matches py5_tools path, use it:
-            if location.is_file():
-                run_sketch = location
-                break
+            if location.is_file(): run_sketch = location; break
 
         # Set switch so Sketch will report window location:
-        py5_switches = "--py5_options external"
-        # Retrieve last display window location:
-        py5_loc = WORKBENCH.get_option(PY5_LOCATION)
-        if py5_loc: # Add location switch to command line:
-            py5_switches += " location=" + ",".join(map(str, py5_loc))
+        py5_switches = '--py5_options external'
+
+        # Retrieve last display window location coords from "configuration.ini":
+        py5_loc = ','.join( map(str, WORKBENCH.get_option(PY5_LOCATION, ())) )
+
+        # Add location switch to command line:
+        if py5_loc: py5_switches += ' location=' + py5_loc
 
         # Run command to execute sketch:
         working_directory = path.dirname(current_file)
-        cd_cmd_line = running.construct_cd_command(working_directory) + "\n"
-        cmd_parts = ["%Run", str(run_sketch), current_file]
-        exe_cmd_line = running.construct_cmd_line(cmd_parts) + " "
-        exe_cmd_line += py5_switches + "\n"
+        cd_cmd_line = running.construct_cd_command(working_directory) + '\n'
+        cmd_parts = ['%Run', str(run_sketch), current_file]
+        exe_cmd_line = running.construct_cmd_line(cmd_parts) + ' '
+        exe_cmd_line += py5_switches + '\n'
         running.get_shell().submit_magic_command(cd_cmd_line + exe_cmd_line)
 
 
@@ -264,7 +264,7 @@ def patched_handle_program_output(self: BaseShellText, msg: BackendEvtMsg):
     if not msg.data.startswith(_MOVE_EVENT_NAME):
         return getattr(self, 'original_handle_program_output')(msg)
 
-    # Write display window location to config file:
+    # Save display window location to config file "configuration.ini":
     if len( py5_loc := msg.data[_EXTRACT_MOVE_COORDS].split() ) == 2:
         # Coordinates are extracted from the message and saved as a CSV string
         # under the PY5_LOCATION run key, so it can be used as Processing's
