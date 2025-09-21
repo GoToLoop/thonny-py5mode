@@ -1,5 +1,5 @@
 '''thonny-py5mode frontend
-interacts with py5mode backend (backend > py5_imported_mode_backend.py)'''
+interacts with py5mode backend (backend > py5_imported_mode_backend.py).'''
 
 import pathlib, site, subprocess, sys, types, webbrowser
 
@@ -78,7 +78,7 @@ def _open_pdf(): webbrowser.open(_OPEN_PDF) # Opens online py5 PDF cheatsheet
 _is_color_selector_open = False
 
 def apply_recommended_py5_config() -> None:
-    '''Apply some recommended py5 theme, syntax and settings for Thonny'''
+    '''Apply some recommended py5 theme, syntax and settings for Thonny.'''
 
     WORKBENCH.set_option('view.ui_theme', 'Kyanite UI')
     WORKBENCH.set_option('view.syntax_theme', 'Kyanite Syntax')
@@ -94,7 +94,7 @@ def apply_recommended_py5_config() -> None:
 
 
 def execute_imported_mode() -> None:
-    '''Run imported mode script using py5_tools run_sketch'''
+    '''Run imported mode script using py5_tools run_sketch.'''
 
     current_editor = WORKBENCH.get_editor_notebook().get_current_editor()
     current_file = current_editor.get_filename()
@@ -140,12 +140,12 @@ def execute_imported_mode() -> None:
 
 
 def patched_execute_current(self: Runner, command_name: str) -> None:
-    '''Override run button behavior for py5 imported mode'''
+    '''Override run button behavior for py5 imported mode.'''
     execute_imported_mode()
 
 
 def patch_token_coloring() -> None:
-    '''Add py5 keywords to syntax highlighting'''
+    '''Add py5 keywords to syntax highlighting.'''
 
     spec = util.find_spec("py5_tools")
 
@@ -163,7 +163,7 @@ def patch_token_coloring() -> None:
 
 
 def set_py5_imported_mode() -> None:
-    '''Set imported mode variable in thonny configuration.ini file'''
+    '''Set imported mode variable in thonny configuration.ini file.'''
 
     if WORKBENCH.in_simple_mode():
         env["PY5_IMPORTED_MODE"] = "auto"
@@ -191,7 +191,7 @@ def set_py5_imported_mode() -> None:
 
 
 def toggle_py5_imported_mode() -> None:
-    '''Toggle py5 imported mode settings'''
+    '''Toggle py5 imported mode settings.'''
 
     var = WORKBENCH.get_variable(PY5_IMPORTED_MODE)
     var.set(not var.get())
@@ -211,7 +211,7 @@ def color_selector() -> None:
 
 
 """ def convert_code(translator) -> None:
-    '''Function to handle different py5_tools conversions'''
+    '''Function to handle different py5_tools conversions.'''
 
     current_editor = WORKBENCH.get_editor_notebook().get_current_editor()
     current_file = current_editor.get_filename()
@@ -230,7 +230,7 @@ def color_selector() -> None:
 
 
 def show_sketch_folder() -> None:
-    '''Open the enclosing folder of the current file'''
+    '''Open the enclosing folder of the current file.'''
 
     current_editor = WORKBENCH.get_editor_notebook().get_current_editor()
     # Check if the editor is empty/blank:
@@ -257,24 +257,25 @@ def show_sketch_folder() -> None:
 
 
 def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
-    '''Catch display window movements and write coords. to the config file'''
+    '''Catch display window movement events and store their coordinate pair to
+    the config file. Forwards other event types to the the original method.'''
 
-    # If not a window move event, forward the message to the original function,
-    # so it logs the rest of the shell output as usual:
+    # If the message isn't a window move event, delegate to the original handler
+    # for shell logging as ussual:
     if not msg.data.startswith(_MOVE_EVENT_NAME):
         return getattr(self, 'original_handle_program_output')(msg)
 
-    # Coordinate pair is extracted from the received message representing the
-    # display window location; and then it's converted to the CSV format:
+    # Extracts the coordinate pair from the received message representing the
+    # display window location, and converts it to the CSV format:
     py5_loc = msg.data[_EXTRACT_MOVE_COORDS].replace(' ', ',') # "x,y"
 
-    # And finally it's saved to config file "configuration.ini"'s [run] section
-    # as key 'py5_location', to be used as Processing's initial canvas location.
+    # And next it's saved to the [run] section of file "configuration.ini" as
+    # key 'py5_location', to later be used to set Processing's canvas location:
     WORKBENCH.set_option(PY5_LOCATION, py5_loc)
 
 
 def load_plugin() -> None:
-    '''Thonny's plugin callback'''
+    '''Thonny's plugin callback.'''
 
     WORKBENCH.set_default(PY5_IMPORTED_MODE, False)
 
