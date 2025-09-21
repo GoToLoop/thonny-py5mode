@@ -264,12 +264,13 @@ def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
     if not msg.data.startswith(_MOVE_EVENT_NAME):
         return getattr(self, 'original_handle_program_output')(msg)
 
-    # Save display window location to config file "configuration.ini":
-    if len( py5_loc := msg.data[_EXTRACT_MOVE_COORDS].split() ) == 2:
-        # Coordinate pair is extracted from the received message and saved
-        # in CSV format under the config's [run] section as key 'py5_location',
-        # so it can be used as Processing's initial canvas location.
-        WORKBENCH.set_option(PY5_LOCATION, ','.join(py5_loc))
+    # Coordinate pair is extracted from the received message representing the
+    # display window location; and then it's converted to the CSV format:
+    py5_loc = msg.data[_EXTRACT_MOVE_COORDS].replace(' ', ',') # "x,y"
+
+    # And finally it's saved to config file "configuration.ini"'s [run] section
+    # as key 'py5_location', to be used as Processing's initial canvas location.
+    WORKBENCH.set_option(PY5_LOCATION, py5_loc)
 
 
 def load_plugin() -> None:
