@@ -258,15 +258,15 @@ def show_sketch_folder() -> None:
 
 def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
     '''Catch display window movement events and store their coordinate pair to
-    the config file. Forwards other event types to the the original method.'''
+    the config file. Forward other event types to the the original method.'''
 
     # If the message isn't a window move event, delegate to the original handler
     # for shell logging as usual:
     if not msg.data.startswith(_MOVE_EVENT_NAME):
         return getattr(self, 'original_handle_program_output')(msg)
 
-    # Extract the coordinate pair from the received message representing the
-    # display window location, and converts it to the CSV format:
+    # Extract the coordinate pair from the received message representing
+    # Processing canvas' last location, and convert it to the CSV format:
     py5_loc = msg.data[_EXTRACT_MOVE_COORDS].replace(' ', ',') # "x,y"
 
     # Next, save it to the [run] section of file "configuration.ini" as key
