@@ -24,7 +24,7 @@ from .install_jdk import install_jdk, WORKBENCH
 # Now vendored on this very repo:
 from .py5colorpicker.tkcolorpicker import modeless_colorpicker
 
-class BackendEvtMsg(BackendEvent, InputSubmission):
+class BackendEvt(BackendEvent, InputSubmission):
     '''Type hint only: combines `BackendEvent` + `InputSubmission` to indicate
     that the former has been instantiated with an additional `data: str` field.
 
@@ -256,7 +256,7 @@ def show_sketch_folder() -> None:
         subprocess.Popen(["explorer", path_dir])
 
 
-def patched_handle_program_output(self: BaseShellText, msg: BackendEvtMsg):
+def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
     '''Catch display window movements and write coords. to the config file'''
 
     # If not a window move event, forward the message to the original function,
