@@ -36,8 +36,8 @@ class BackendEvtMsg(BackendEvent, InputSubmission):
 PY5_IMPORTED_MODE = 'run.py5_imported_mode'
 PY5_LOCATION = 'run.py5_location'
 
-_MOVE_EVT_NAME = '__MOVE__ '
-_COORDS_CAPTURE = slice(len(_MOVE_EVT_NAME), -1)
+_MOVE_EVENT_NAME = '__MOVE__ '
+_EXTRACT_MOVE_COORDS = slice(len(_MOVE_EVENT_NAME), -1)
 
 _MENU = NamedTuple('Py5Menu', ( # Define all fields as type str
     ('TOGGLE_PY5', str),
@@ -210,7 +210,7 @@ def color_selector() -> None:
         _is_color_selector_open = False
 
 
-def convert_code(translator) -> None:
+""" def convert_code(translator) -> None:
     '''Function to handle different py5_tools conversions'''
 
     current_editor = WORKBENCH.get_editor_notebook().get_current_editor()
@@ -226,7 +226,7 @@ def convert_code(translator) -> None:
         current_editor.save_file()
         translator.translate_file(current_file, current_file)
         current_editor._load_file(current_file, keep_undo=True)
-        showinfo(_TITLE, _MSG, parent=WORKBENCH)
+        showinfo(_TITLE, _MSG, parent=WORKBENCH) """
 
 
 def show_sketch_folder() -> None:
@@ -261,11 +261,11 @@ def patched_handle_program_output(self: BaseShellText, msg: BackendEvtMsg):
 
     # If not a window move event, forward the message to the original function,
     # so it logs the rest of the shell output as usual:
-    if not msg.data.startswith(_MOVE_EVT_NAME):
+    if not msg.data.startswith(_MOVE_EVENT_NAME):
         return getattr(self, 'original_handle_program_output')(msg)
 
     # Write display window location to config file:
-    if len( py5_loc := msg.data[_COORDS_CAPTURE].split() ) == 2:
+    if len( py5_loc := msg.data[_EXTRACT_MOVE_COORDS].split() ) == 2:
         # Coordinates are extracted from the message and saved as a CSV string
         # under the PY5_LOCATION run key, so it can be used as Processing's
         # initial canvas location.
