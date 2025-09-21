@@ -266,9 +266,9 @@ def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
 
     # Save display window location to config file "configuration.ini":
     if len( py5_loc := msg.data[_EXTRACT_MOVE_COORDS].split() ) == 2:
-        # Coordinates are extracted from the message and saved as a CSV string
-        # under the PY5_LOCATION run key, so it can be used as Processing's
-        # initial canvas location.
+        # Coordinate pair is extracted from the received message and saved
+        # in CSV format under the config's [run] section as key 'py5_location',
+        # so it can be used as Processing's initial canvas location.
         WORKBENCH.set_option(PY5_LOCATION, ','.join(py5_loc))
 
 
