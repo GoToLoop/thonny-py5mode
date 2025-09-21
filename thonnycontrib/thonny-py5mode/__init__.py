@@ -261,16 +261,16 @@ def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
     the config file. Forwards other event types to the the original method.'''
 
     # If the message isn't a window move event, delegate to the original handler
-    # for shell logging as ussual:
+    # for shell logging as usual:
     if not msg.data.startswith(_MOVE_EVENT_NAME):
         return getattr(self, 'original_handle_program_output')(msg)
 
-    # Extracts the coordinate pair from the received message representing the
+    # Extract the coordinate pair from the received message representing the
     # display window location, and converts it to the CSV format:
     py5_loc = msg.data[_EXTRACT_MOVE_COORDS].replace(' ', ',') # "x,y"
 
-    # And next it's saved to the [run] section of file "configuration.ini" as
-    # key 'py5_location', to later be used to set Processing's canvas location:
+    # Next, save it to the [run] section of file "configuration.ini" as key
+    # 'py5_location', to be later used to set Processing's canvas location:
     WORKBENCH.set_option(PY5_LOCATION, py5_loc)
 
 
