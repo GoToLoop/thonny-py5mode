@@ -265,7 +265,7 @@ def patched_handle_program_output(self: BaseShellText, msg: BackendEvtMsg):
         return getattr(self, 'original_handle_program_output')(msg)
 
     # Write display window location to config file:
-    if len(py5_loc := msg.data[_COORDS_CAPTURE].split()) == 2:
+    if len( py5_loc := msg.data[_COORDS_CAPTURE].split() ) == 2:
         # Coordinates are extracted from the message and saved as a CSV string
         # under the PY5_LOCATION run key, so it can be used as Processing's
         # initial canvas location.
