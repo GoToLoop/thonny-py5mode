@@ -46,11 +46,11 @@ _MENU = NamedTuple('Py5Menu', ( # Define all fields as type str
     ('PY5_REF', str),
     ('PY5_PDF', str),
     ('SKETCH_DIR', str)))(*map(tr, ( # Immediately invoked instantiation
-        'Imported mode for py5',
+        'Toggle imported mode for py5',
         'Apply recommended py5 settings',
         'Color selector',
-        'py5 reference',
-        'py5 quick reference',
+        'py5 online reference',
+        'py5 online pdf cheatsheet',
         'Show sketch folder')))
 '''
 NamedTuple containing UI translated labels for plugin py5mode related features:
@@ -66,14 +66,14 @@ _TITLE, _MSG = map(tr, ('py5 Conversion', 'Conversion complete'))
 _EXTS = 'py', 'py5', 'pyde'
 
 _HTTP, _PY5_SITE, _REF = 'https://', 'py5Coding', '.org/reference/'
-_OPEN_REF = _HTTP + _PY5_SITE + _REF
+OPEN_web_REF = _HTTP + _PY5_SITE + _REF
 
 _GIT_RAW = _HTTP + 'raw.GitHubUserContent.com/'
 _REF_PDF = _PY5_SITE + '/thonny-py5mode/main/assets/py5_quick_reference.pdf'
-_OPEN_PDF = _GIT_RAW + _REF_PDF
+OPEN_web_PDF = _GIT_RAW + _REF_PDF
 
-def _open_ref(): webbrowser.open(_OPEN_REF) # Opens online py5 API reference
-def _open_pdf(): webbrowser.open(_OPEN_PDF) # Opens online py5 PDF cheatsheet
+def open_web_ref(): webbrowser.open(OPEN_web_REF) # Online py5 API reference
+def open_web_pdf(): webbrowser.open(OPEN_web_PDF) # Online py5 PDF cheatsheet
 
 _is_color_selector_open = False
 
@@ -290,9 +290,9 @@ def load_plugin() -> None:
     cmd('py5_color_selector', 'py5', _MENU.COLOR_PICKER,
         color_selector, group=25, default_sequence='<Alt-c>')
 
-    cmd('py5_reference', 'py5', _MENU.PY5_REF, _open_ref, group=30)
+    cmd('py5_reference', 'py5', _MENU.PY5_REF, open_web_ref, group=30)
 
-    cmd('py5_quickreference', 'py5', _MENU.PY5_PDF, _open_pdf, group=30)
+    cmd('py5_quickreference', 'py5', _MENU.PY5_PDF, open_web_pdf, group=30)
 
     cmd('open_folder', 'py5', _MENU.SKETCH_DIR, show_sketch_folder, group=40)
 
