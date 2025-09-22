@@ -65,7 +65,7 @@ NamedTuple containing UI translated labels for plugin py5mode related features:
 - SKETCH_DIR: Label for showing the sketch folder.'''
 
 _NO_FILE = cast( tuple[str, str], tuple(map(tr, (
-    'Editor is empty!', 'Do you have a file open in the editor?'))) )
+    'Editor is empty!', 'Do you have any file open in the editor now?'))) )
 
 _NOT_SAVED = cast( tuple[str, str], tuple(map(tr, (
     'Inexisting file!', 'Have you saved this code anywhere yet?'))) )
@@ -224,11 +224,11 @@ def show_sketch_folder() -> None:
 
     # Check if the editor is empty/blank:
     if not ( editor := WORKBENCH.get_editor_notebook().get_current_editor() ):
-        showwarning(*_NO_FILE); return
+        showwarning(*_NO_FILE, parent=WORKBENCH); return
 
     # Check if the file isn't an "<untitled>" (yet-to-be-saved) file:
     if not ( filename := editor.get_filename() ):
-        showwarning(*_NOT_SAVED); return
+        showwarning(*_NOT_SAVED, parent=WORKBENCH); return
 
     open_file_manager( path.dirname(filename) ) # Open the OS file manager
 
