@@ -1,14 +1,18 @@
 '''thonny-py5mode frontend
 interacts with py5mode backend (backend > py5_imported_mode_backend.py).'''
 
-import pathlib, site, subprocess, sys, types, webbrowser
+import site, types, webbrowser
+
+from subprocess import Popen
+from pathlib import Path
+from jdk import _IS_WINDOWS, OS, OperatingSystem
 
 from os import path, environ as env
-from typing import NamedTuple
+from typing import cast, NamedTuple
 
 from distutils.sysconfig import get_python_lib
 from importlib import machinery, util
-from tkinter.messagebox import showerror, showinfo
+from tkinter.messagebox import showwarning
 
 from thonny import get_runner, editors, running, token_utils
 from thonny.common import BackendEvent, InputSubmission
@@ -17,7 +21,7 @@ from thonny.running import Runner
 from thonny.shell import BaseShellText
 
 from .about_plugin import add_about_py5mode_command
-from .install_jdk import install_jdk, WORKBENCH
+from .install_jdk import install_jdk, WORKBENCH, StrPath
 
 # Modified tkColorPicker (by j4321) to work with Thonny for MacOS:
 # https://GitHub.com/tabreturn/thonny-py5mode-tkcolorpicker
@@ -32,7 +36,6 @@ class BackendEvt(BackendEvent, InputSubmission):
     help static analysis tools recognize that a `BackendEvent` instance includes
     both `BackendEvent` attributes and a `data` field of type string.'''
 
-
 PY5_IMPORTED_MODE = 'run.py5_imported_mode'
 PY5_LOCATION = 'run.py5_location'
 
@@ -45,13 +48,13 @@ _MENU = NamedTuple('Py5Menu', ( # Define all fields as type str
     ('COLOR_PICKER', str),
     ('PY5_REF', str),
     ('PY5_PDF', str),
-    ('SKETCH_DIR', str)))(*map(tr, ( # Immediately invoked instantiation
+    ('SKETCH_DIR', str) ))(*map(tr, ( # Immediately invoked instantiation
         'Toggle imported mode for py5',
         'Apply recommended py5 settings',
         'Color selector',
         'py5 online reference',
         'py5 online pdf cheatsheet',
-        'Show sketch folder')))
+        'Show current sketch folder') ))
 '''
 NamedTuple containing UI translated labels for plugin py5mode related features:
 - TOGGLE_PY5: Label for toggling py5 mode.
@@ -61,24 +64,30 @@ NamedTuple containing UI translated labels for plugin py5mode related features:
 - PY5_PDF: Label for viewing the py5 quick reference PDF.
 - SKETCH_DIR: Label for showing the sketch folder.'''
 
+_NO_FILE = cast( tuple[str, str], tuple(map(tr, (
+    'Editor is empty!', 'Do you have a file open in the editor?'))) )
+
+_NOT_SAVED = cast( tuple[str, str], tuple(map(tr, (
+    'Inexisting file!', 'Have you saved this code anywhere yet?'))) )
+
 _TITLE, _MSG = map(tr, ('py5 Conversion', 'Conversion complete'))
 
 _EXTS = 'py', 'py5', 'pyde'
 
 _HTTP, _PY5_SITE, _REF = 'https://', 'py5Coding', '.org/reference/'
-OPEN_web_REF = _HTTP + _PY5_SITE + _REF
+_OPEN_WEB_REF = _HTTP + _PY5_SITE + _REF
 
 _GIT_RAW = _HTTP + 'raw.GitHubUserContent.com/'
 _REF_PDF = _PY5_SITE + '/thonny-py5mode/main/assets/py5_quick_reference.pdf'
-OPEN_web_PDF = _GIT_RAW + _REF_PDF
+_OPEN_WEB_PDF = _GIT_RAW + _REF_PDF
 
-def open_web_ref(): webbrowser.open(OPEN_web_REF) # Online py5 API reference
-def open_web_pdf(): webbrowser.open(OPEN_web_PDF) # Online py5 PDF cheatsheet
+def open_web_ref(): webbrowser.open(_OPEN_WEB_REF) # Online py5 API reference
+def open_web_pdf(): webbrowser.open(_OPEN_WEB_PDF) # Online py5 PDF cheatsheet
 
 _is_color_selector_open = False
 
-def apply_recommended_py5_config() -> None:
-    '''Apply some recommended py5 theme, syntax and settings for Thonny.'''
+def apply_py5_config() -> None:
+    '''Apply recommended py5 theme, syntax and settings for Thonny.'''
 
     WORKBENCH.set_option('view.ui_theme', 'Kyanite UI')
     WORKBENCH.set_option('view.syntax_theme', 'Kyanite Syntax')
@@ -111,10 +120,10 @@ def execute_imported_mode() -> None:
         site_packages = str(site.getsitepackages()[0])
         plug_packages = util.find_spec('py5_tools').submodule_search_locations
         run_sketch_locations = [
-            pathlib.Path(user_packages + '/py5_tools/tools/run_sketch.py'),
-            pathlib.Path(site_packages + '/py5_tools/tools/run_sketch.py'),
-            pathlib.Path(plug_packages[0] + '/tools/run_sketch.py'),
-            pathlib.Path(get_python_lib() + '/py5_tools/tools/run_sketch.py'),
+            Path(user_packages + '/py5_tools/tools/run_sketch.py'),
+            Path(site_packages + '/py5_tools/tools/run_sketch.py'),
+            Path(plug_packages[0] + '/tools/run_sketch.py'),
+            Path(get_python_lib() + '/py5_tools/tools/run_sketch.py'),
         ]
 
         for location in run_sketch_locations:
@@ -142,24 +151,6 @@ def execute_imported_mode() -> None:
 def patched_execute_current(self: Runner, command_name: str) -> None:
     '''Override run button behavior for py5 imported mode.'''
     execute_imported_mode()
-
-
-def patch_token_coloring() -> None:
-    '''Add py5 keywords to syntax highlighting.'''
-
-    spec = util.find_spec("py5_tools")
-
-    # Cannot use `dir(py5)` because of jvm check, hence direct loading:
-    path = pathlib.Path(spec.submodule_search_locations[0]) / "reference.py"
-    loader = machinery.SourceFileLoader("py5_tools_reference", str(path))
-    module = types.ModuleType(loader.name)
-    loader.exec_module(module)
-
-    # Add keywords to thonny builtin list:
-    patched_builtinlist = token_utils._builtinlist + module.PY5_ALL_STR
-    matches = token_utils.matches_any("builtin", patched_builtinlist)
-    patched_BUILTIN = r'([^.\'"\\#]\b|^)' + (matches + r"\b")
-    token_utils.BUILTIN = patched_BUILTIN
 
 
 def set_py5_imported_mode() -> None:
@@ -210,55 +201,51 @@ def color_selector() -> None:
         _is_color_selector_open = False
 
 
-""" def convert_code(translator) -> None:
-    '''Function to handle different py5_tools conversions.'''
+def patch_token_coloring() -> None:
+    '''Add py5 keywords to syntax highlighting.'''
 
-    current_editor = WORKBENCH.get_editor_notebook().get_current_editor()
-    current_file = current_editor.get_filename()
+    spec = util.find_spec("py5_tools")
 
-    if current_file is None:
-        # Save unsaved file before attempting to convert it:
-        editors.Editor.save_file(current_editor)
-        current_file = current_editor.get_filename()
+    # Cannot use `dir(py5)` because of jvm check, hence direct loading:
+    path = Path(spec.submodule_search_locations[0]) / "reference.py"
+    loader = machinery.SourceFileLoader("py5_tools_reference", str(path))
+    module = types.ModuleType(loader.name)
+    loader.exec_module(module)
 
-    if current_file and current_file.split(".")[-1] in _EXTS:
-        # Save and run perform conversion:
-        current_editor.save_file()
-        translator.translate_file(current_file, current_file)
-        current_editor._load_file(current_file, keep_undo=True)
-        showinfo(_TITLE, _MSG, parent=WORKBENCH) """
+    # Add keywords to thonny builtin list:
+    patched_builtinlist = token_utils._builtinlist + module.PY5_ALL_STR
+    matches = token_utils.matches_any("builtin", patched_builtinlist)
+    patched_BUILTIN = r'([^.\'"\\#]\b|^)' + (matches + r"\b")
+    token_utils.BUILTIN = patched_BUILTIN
 
 
 def show_sketch_folder() -> None:
-    '''Open the enclosing folder of the current file.'''
+    '''Open the enclosing folder of the current sketch file.'''
 
-    current_editor = WORKBENCH.get_editor_notebook().get_current_editor()
     # Check if the editor is empty/blank:
-    try:
-        filename = current_editor.get_filename()
-    except AttributeError:
-        showerror("Editor is empty", "Do you have a file open in the editor?")
-        return
+    if not ( editor := WORKBENCH.get_editor_notebook().get_current_editor() ):
+        showwarning(*_NO_FILE); return
 
-    # Check if the file isn't an <untitled> (yet to be saved) file:
-    try:
-        path_dir = path.dirname(filename)
-    except TypeError:
-        showerror("File not found", "Have you saved your file somewhere yet?")
-        return
+    # Check if the file isn't an "<untitled>" (yet-to-be-saved) file:
+    if not ( filename := editor.get_filename() ):
+        showwarning(*_NOT_SAVED); return
 
-    # Open file manager for Mac/Linux/Windows:
-    if sys.platform == "darwin":
-        subprocess.Popen(["open", path_dir])
-    elif sys.platform == "linux":
-        subprocess.Popen(["xdg-open", path_dir])
-    else:
-        subprocess.Popen(["explorer", path_dir])
+    open_file_manager( path.dirname(filename) ) # Open the OS file manager
+
+
+def open_file_manager(path_dir: StrPath) -> None:
+    '''Open file manager for Windows/Mac/Linux.'''
+
+    if _IS_WINDOWS: file_manager = 'explorer' # Windows
+    elif OS is OperatingSystem.MAC: file_manager = 'open' # MacOS
+    else: file_manager = 'xdg-open' # Linux/Unix
+
+    Popen( (file_manager, path_dir) )
 
 
 def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
-    '''Catch display window movement events and store their coordinate pair to
-    the config file. Forward other event types to the the original method.'''
+    '''Catch display window movement events and store their coordinate pair in
+    the config file. Forward other event types to the original method.'''
 
     # If the message isn't a window move event, delegate to the original handler
     # for shell logging as usual:
@@ -281,20 +268,20 @@ def load_plugin() -> None:
 
     cmd = WORKBENCH.add_command
 
-    cmd('toggle_py5_imported_mode', 'py5', _MENU.TOGGLE_PY5,
-        toggle_py5_imported_mode, flag_name=PY5_IMPORTED_MODE, group=10)
+    cmd('toggle', 'py5', _MENU.TOGGLE_PY5, toggle_py5_imported_mode, group=10,
+        flag_name=PY5_IMPORTED_MODE)
 
-    cmd('apply_recommended_py5_config', 'py5', _MENU.P5_THEME,
-        apply_recommended_py5_config, group=20)
+    cmd('apply_py5_theme', 'py5', _MENU.P5_THEME, apply_py5_config, group=20)
 
-    cmd('py5_color_selector', 'py5', _MENU.COLOR_PICKER,
-        color_selector, group=25, default_sequence='<Alt-c>')
+    cmd('color_selector', 'py5', _MENU.COLOR_PICKER, color_selector, group=25,
+        default_sequence='<Alt-c>')
 
     cmd('py5_reference', 'py5', _MENU.PY5_REF, open_web_ref, group=30)
 
-    cmd('py5_quickreference', 'py5', _MENU.PY5_PDF, open_web_pdf, group=30)
+    cmd('py5_quick_reference', 'py5', _MENU.PY5_PDF, open_web_pdf, group=30)
 
-    cmd('open_folder', 'py5', _MENU.SKETCH_DIR, show_sketch_folder, group=40)
+    cmd('open_folder', 'py5', _MENU.SKETCH_DIR, show_sketch_folder, group=40,
+        default_sequence='<Control-j>')
 
     add_about_py5mode_command(50)
     patch_token_coloring()
