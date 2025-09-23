@@ -1,10 +1,11 @@
 '''thonny-py5mode frontend
 interacts with py5mode backend (backend > py5_imported_mode_backend.py).'''
 
-import site, types, webbrowser
+import site, webbrowser
 
 from subprocess import Popen
-from pathlib import Path
+from pathlib import Path, PurePath
+from types import ModuleType
 from jdk import _IS_WINDOWS, OS, OperatingSystem
 
 from os import path, environ as env
@@ -204,19 +205,19 @@ def color_selector() -> None:
 def patch_token_coloring() -> None:
     '''Add py5 keywords to syntax highlighting.'''
 
-    spec = util.find_spec("py5_tools")
+    if not ( spec := util.find_spec('py5_tools') ): return
+    if not ( locations := spec.submodule_search_locations ): return
 
-    # Cannot use `dir(py5)` because of jvm check, hence direct loading:
-    path = Path(spec.submodule_search_locations[0]) / "reference.py"
-    loader = machinery.SourceFileLoader("py5_tools_reference", str(path))
-    module = types.ModuleType(loader.name)
+    # Cannot use `dir(py5)` because of JVM check, hence direct loading:
+    py5_ref_path = str( PurePath(locations[0], 'reference.py') )
+    loader = machinery.SourceFileLoader('py5_tools_reference', py5_ref_path)
+    module = ModuleType(loader.name)
     loader.exec_module(module)
 
-    # Add keywords to thonny builtin list:
-    patched_builtinlist = token_utils._builtinlist + module.PY5_ALL_STR
-    matches = token_utils.matches_any("builtin", patched_builtinlist)
-    patched_BUILTIN = r'([^.\'"\\#]\b|^)' + (matches + r"\b")
-    token_utils.BUILTIN = patched_BUILTIN
+    # Add keywords to Thonny builtin list:
+    extended_builtinlist = token_utils._builtinlist + module.PY5_ALL_STR
+    matches = token_utils.matches_any('builtin', extended_builtinlist)
+    token_utils.BUILTIN = r'([^.\'"\\#]\b|^)' + matches + '\\b'
 
 
 def show_sketch_folder() -> None:
