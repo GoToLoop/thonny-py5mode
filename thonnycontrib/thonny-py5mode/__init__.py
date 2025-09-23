@@ -209,13 +209,13 @@ def patch_token_coloring() -> None:
     if not ( spec := util.find_spec('py5_tools') ): return
     if not ( locations := spec.submodule_search_locations ): return
 
-    # Cannot use `dir(py5)` because of JVM check, hence direct loading:
+    # Can't use `dir(py5)` b/c of JVM check; hence loading instead of importing:
     py5_ref_path = str( PurePath(locations[0], 'reference.py') )
     loader = machinery.SourceFileLoader('py5_tools_reference', py5_ref_path)
     module = ModuleType(loader.name)
     loader.exec_module(module)
 
-    # Add py5/Processing keywords to Thonny's builtin list:
+    # Concatenate py5/Processing keywords to Thonny's builtin list:
     extended_builtinlist = token_utils._builtinlist + module.PY5_ALL_STR
     matches = token_utils.matches_any('builtin', extended_builtinlist)
     token_utils.BUILTIN = r'([^.\'"\\#]\b|^)' + matches + '\\b'
