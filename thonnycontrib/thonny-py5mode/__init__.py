@@ -76,14 +76,14 @@ _TITLE, _MSG = map(tr, ('py5 Conversion', 'Conversion complete'))
 _EXTS = 'py', 'py5', 'pyde'
 
 _HTTP, _PY5_SITE, _REF = 'https://', 'py5Coding', '.org/reference/'
-_OPEN_WEB_REF = _HTTP + _PY5_SITE + _REF
+_WEB_REF = _HTTP + _PY5_SITE + _REF
 
 _GIT_RAW = _HTTP + 'raw.GitHubUserContent.com/'
 _REF_PDF = _PY5_SITE + '/thonny-py5mode/main/assets/py5_quick_reference.pdf'
-_OPEN_WEB_PDF = _GIT_RAW + _REF_PDF
+_WEB_PDF = _GIT_RAW + _REF_PDF
 
-def open_web_ref(): webbrowser.open(_OPEN_WEB_REF) # Online py5 API reference
-def open_web_pdf(): webbrowser.open(_OPEN_WEB_PDF) # Online py5 PDF cheatsheet
+def open_web_ref(): webbrowser.open(_WEB_REF) # Online py5 API reference
+def open_web_pdf(): webbrowser.open(_WEB_PDF) # Online py5 PDF cheatsheet
 
 _is_color_selector_open = False
 
