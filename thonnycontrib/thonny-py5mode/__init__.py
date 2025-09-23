@@ -198,13 +198,14 @@ def color_selector() -> None:
 
     if not _is_color_selector_open: # If one is not already open...
         _is_color_selector_open = True
-        modeless_colorpicker(title=_MENU.COLOR_PICKER)
+        modeless_colorpicker(title=_MENU.COLOR_PICKER, parent=WORKBENCH)
         _is_color_selector_open = False
 
 
 def patch_token_coloring() -> None:
     '''Add py5 keywords to syntax highlighting.'''
 
+    # Early-quit if 'py5_tools' isn't found:
     if not ( spec := util.find_spec('py5_tools') ): return
     if not ( locations := spec.submodule_search_locations ): return
 
@@ -214,7 +215,7 @@ def patch_token_coloring() -> None:
     module = ModuleType(loader.name)
     loader.exec_module(module)
 
-    # Add keywords to Thonny builtin list:
+    # Add py5/Processing keywords to Thonny builtin list:
     extended_builtinlist = token_utils._builtinlist + module.PY5_ALL_STR
     matches = token_utils.matches_any('builtin', extended_builtinlist)
     token_utils.BUILTIN = r'([^.\'"\\#]\b|^)' + matches + '\\b'
