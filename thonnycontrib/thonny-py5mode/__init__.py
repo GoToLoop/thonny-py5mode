@@ -7,9 +7,9 @@ import site, webbrowser
 from os import path, environ as env
 from pathlib import Path, PurePath
 
-from distutils.sysconfig import get_python_lib
 from importlib import machinery, util
 from subprocess import Popen
+from sysconfig import get_path
 
 from tkinter.messagebox import showwarning
 
@@ -122,15 +122,16 @@ def execute_imported_mode() -> None:
     if current_file and current_file.split('.')[-1] in _EXTS:
         # Save and run py5 imported mode:
         current_editor.save_file()
+
         user_packages = str(site.getusersitepackages())
         site_packages = str(site.getsitepackages()[0])
         plug_packages = util.find_spec('py5_tools').submodule_search_locations
-        run_sketch_locations = [
+
+        run_sketch_locations = (
             Path(user_packages + '/py5_tools/tools/run_sketch.py'),
             Path(site_packages + '/py5_tools/tools/run_sketch.py'),
             Path(plug_packages[0] + '/tools/run_sketch.py'),
-            Path(get_python_lib() + '/py5_tools/tools/run_sketch.py'),
-        ]
+            Path(get_path('purelib') + '/py5_tools/tools/run_sketch.py') )
 
         for location in run_sketch_locations:
             # If location matches py5_tools path, use it:
