@@ -1,19 +1,23 @@
 '''thonny-py5mode frontend
 interacts with py5mode backend (backend > py5_imported_mode_backend.py).'''
 
+# 1. Built-in modules:
 import site, webbrowser
 
-from subprocess import Popen
-from pathlib import Path, PurePath
-from types import ModuleType
-from jdk import _IS_WINDOWS, OS, OperatingSystem
-
 from os import path, environ as env
-from typing import cast, NamedTuple
+from pathlib import Path, PurePath
 
 from distutils.sysconfig import get_python_lib
 from importlib import machinery, util
+from subprocess import Popen
+
 from tkinter.messagebox import showwarning
+
+from types import ModuleType
+from typing import cast, NamedTuple
+
+# 2. Third-party modules:
+from jdk import _IS_WINDOWS, OS, OperatingSystem
 
 from thonny import get_runner, editors, running, token_utils
 from thonny.common import BackendEvent, InputSubmission
@@ -21,6 +25,7 @@ from thonny.languages import tr
 from thonny.running import Runner
 from thonny.shell import BaseShellText
 
+# 3. Local plugin modules:
 from .about_plugin import add_about_py5mode_command
 from .install_jdk import install_jdk, WORKBENCH, StrPath
 
