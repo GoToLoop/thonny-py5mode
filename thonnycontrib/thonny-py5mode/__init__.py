@@ -67,6 +67,7 @@ _MENU = NamedTuple('Py5Menu', ( # Define all fields as type str
         'Show current sketch folder') ))
 '''
 NamedTuple containing UI translated labels for plugin py5mode related features:
+
 - TOGGLE_PY5: Label for toggling py5 mode.
 - P5_THEME: Label for applying recommended py5 settings.
 - COLOR_PICKER: Label for the color selector tool.
@@ -98,7 +99,14 @@ _is_color_selector_open = False
 
 def load_plugin() -> None:
     '''Thonny's plugin callback.'''
+    monkey_patchings()
+    create_py5_menu()
+    add_about_py5mode_command(50)
+    patch_token_coloring()
+    set_py5_imported_mode() # Check JDK if Thonny is opened w/ py5mode active 
 
+
+def create_py5_menu() -> None:
     WORKBENCH.set_default(PY5_IMPORTED_MODE, False)
 
     cmd = WORKBENCH.add_command
@@ -118,6 +126,16 @@ def load_plugin() -> None:
     cmd('open_folder', 'py5', _MENU.SKETCH_DIR, show_sketch_folder, group=40,
         default_sequence='<Control-j>')
 
+
+def monkey_patchings() -> None:
+    '''Applies monkey patches to Thonny internals for custom behavior:
+
+    - Replaces BaseShellText's non-public `_handle_program_output()` method
+      with a patched version.
+
+    - Stores Runner's original `execute_current()` method on its class so it
+      can be monkey-patched later (e.g., when toggling py5mode).'''
+
     # Monkey-patching BaseShellText's `_handle_program_output()` method!
     # It's a non-public API, so its handling may vary across Thonny versions:
     h_p_o = BaseShellText._handle_program_output
@@ -127,10 +145,6 @@ def load_plugin() -> None:
     # Also save Runner's `execute_current()` original method; so it can also be
     # monkey-patched later when toggling py5mode button:
     setattr(Runner, 'original_execute_current', Runner.execute_current)
-
-    add_about_py5mode_command(50)
-    patch_token_coloring()
-    set_py5_imported_mode()
 
 
 def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
