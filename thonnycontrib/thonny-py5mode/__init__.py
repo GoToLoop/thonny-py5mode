@@ -107,12 +107,13 @@ def load_plugin() -> None:
 
 
 def create_py5_menu() -> None:
+    '''Adds Py5-related commands to Thonny's menu system.'''
     WORKBENCH.set_default(PY5_IMPORTED_MODE, False)
 
     cmd = WORKBENCH.add_command
 
     cmd('toggle', 'py5', _MENU.TOGGLE_PY5, toggle_py5_imported_mode, group=10,
-        flag_name=PY5_IMPORTED_MODE)
+        default_sequence='<Control-J>', flag_name=PY5_IMPORTED_MODE)
 
     cmd('apply_py5_theme', 'py5', _MENU.P5_THEME, apply_py5_config, group=20)
 
@@ -128,22 +129,16 @@ def create_py5_menu() -> None:
 
 
 def monkey_patchings() -> None:
-    '''Applies monkey patches to Thonny internals for custom behavior:
+    '''Applies monkey patches to Thonny internals for custom behavior.'''
 
-    - Replaces BaseShellText's non-public `_handle_program_output()` method
-      with a patched version.
-
-    - Stores Runner's original `execute_current()` method on its class so it
-      can be monkey-patched later (e.g., when toggling py5mode).'''
-
-    # Monkey-patching BaseShellText's `_handle_program_output()` method!
+    # Replace `_handle_program_output()` method with a patched version!
     # It's a non-public API, so its handling may vary across Thonny versions:
     h_p_o = BaseShellText._handle_program_output
     setattr(BaseShellText, 'original_handle_program_output', h_p_o)
     BaseShellText._handle_program_output = patched_handle_program_output
 
-    # Also save Runner's `execute_current()` original method; so it can also be
-    # monkey-patched later when toggling py5mode button:
+    # Store Runner's original `execute_current()` method on its class; so it
+    # can be monkey-patched later (e.g., when toggling py5mode):
     setattr(Runner, 'original_execute_current', Runner.execute_current)
 
 
