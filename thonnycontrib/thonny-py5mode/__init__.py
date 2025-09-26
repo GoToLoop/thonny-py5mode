@@ -99,8 +99,8 @@ _is_color_selector_open = False
 
 def load_plugin() -> None:
     '''Thonny's plugin callback.'''
-    monkey_patchings()
     create_py5_menu()
+    monkey_patchings()
     add_about_py5mode_command(50)
     patch_token_coloring()
     set_py5_imported_mode() # Check JDK if Thonny is opened w/ py5mode active 
@@ -211,6 +211,8 @@ def set_py5_imported_mode() -> None:
 def patched_execute_current(self: Runner, command_name: str) -> None:
     '''Override run button behavior to execute the py5 imported mode script via
     "py5_tools/tools/run_sketch.py".'''
+
+    _ = self; _ = command_name # Unused parameters
 
     current_editor = WORKBENCH.get_editor_notebook().get_current_editor()
     current_file = current_editor.get_filename()
