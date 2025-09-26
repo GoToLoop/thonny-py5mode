@@ -190,15 +190,15 @@ def set_py5_imported_mode() -> None:
     is_on = get_py5mode_toggle_state_variable().get()
     env['PY5_IMPORTED_MODE'] = str(is_on)
 
-    if is_on: # Switch on/off py5 run button behavior
-        Runner.execute_current = patched_execute_current
-        # Must restart backend for py5 autocompletion upon installing JDK:
-        if (runner := get_runner()): runner.restart_backend(False)
+    # Switch on/off py5 run button behavior
+    if is_on: Runner.execute_current = patched_execute_current
+        
+    # Patched method non-existant when imported mode active at launch:
+    else: Runner.execute_current = getattr(Runner, 'original_execute_current')
 
-    else: # Patched method non-existant when imported mode active at launch:
-        Runner.execute_current = getattr(Runner, 'original_execute_current')
-        # This line disables py5 autocompletion in this instance:
-        if (runner := get_runner()): runner.restart_backend(False)
+    # Must restart backend for py5 autocompletion upon installing JDK.
+    # This line disables py5 autocompletion in this instance:
+    if (runner := get_runner()): runner.restart_backend(False)
 
 
 def patched_execute_current(self: Runner, command_name: str) -> None:
