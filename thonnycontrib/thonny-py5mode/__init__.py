@@ -15,13 +15,14 @@ from tkinter import BooleanVar
 from tkinter.messagebox import showwarning
 
 from types import ModuleType
-from typing import cast, NamedTuple
+from typing import cast, NamedTuple, Optional
 
 # 2. Third-party modules:
 from jdk import _IS_WINDOWS, OS, OperatingSystem
 
-from thonny import get_runner, editors, running, token_utils
+from thonny import get_runner, running, token_utils
 from thonny.common import BackendEvent, InputSubmission
+from thonny.editors import Editor
 from thonny.languages import tr
 from thonny.running import Runner
 from thonny.shell import BaseShellText
@@ -214,48 +215,49 @@ def patched_execute_current(self: Runner, command_name: str) -> None:
 
     _ = self; _ = command_name # Unused parameters
 
-    current_editor = WORKBENCH.get_editor_notebook().get_current_editor()
-    current_file = current_editor.get_filename()
+    current_file, current_editor = get_current_filename_and_editor()
+    if not current_editor: return
 
-    if current_file is None:
+    if not current_file:
         # Thonny must 'save as' any new files, before it can run them:
-        editors.Editor.save_file(current_editor)
-        current_file = current_editor.get_filename()
+        Editor.save_file(current_editor)
+        current_file = get_current_filename_and_editor()[0]
 
-    if current_file and current_file.split('.')[-1] in _EXTS:
-        # Save and run py5 imported mode:
-        current_editor.save_file()
+    if current_file.split('.')[-1] not in _EXTS: return
 
-        user_packages = str(site.getusersitepackages())
-        site_packages = str(site.getsitepackages()[0])
-        plug_packages = util.find_spec('py5_tools').submodule_search_locations
+    # Save and run py5 imported mode:
+    current_editor.save_file()
 
-        run_sketch_locations = (
-            Path(user_packages + '/py5_tools/tools/run_sketch.py'),
-            Path(site_packages + '/py5_tools/tools/run_sketch.py'),
-            Path(plug_packages[0] + '/tools/run_sketch.py'),
-            Path(get_path('purelib') + '/py5_tools/tools/run_sketch.py') )
+    user_packages = str(site.getusersitepackages())
+    site_packages = str(site.getsitepackages()[0])
+    plug_packages = util.find_spec('py5_tools').submodule_search_locations
 
-        for location in run_sketch_locations:
-            # If location matches py5_tools path, use it:
-            if location.is_file(): run_sketch = location; break
+    run_sketch_locations = (
+        Path(user_packages + '/py5_tools/tools/run_sketch.py'),
+        Path(site_packages + '/py5_tools/tools/run_sketch.py'),
+        Path(plug_packages[0] + '/tools/run_sketch.py'),
+        Path(get_path('purelib') + '/py5_tools/tools/run_sketch.py') )
 
-        # Set switch so Sketch will report window location:
-        py5_switches = '--py5_options external'
+    for location in run_sketch_locations:
+        # If location matches py5_tools path, use it:
+        if location.is_file(): run_sketch = location; break
 
-        # Retrieve last display window location coords from "configuration.ini":
-        py5_loc = ','.join( map(str, WORKBENCH.get_option(PY5_LOCATION, ())) )
+    # Set switch so Sketch will report window location:
+    py5_switches = '--py5_options external'
 
-        # Add location switch to command line:
-        if py5_loc: py5_switches += ' location=' + py5_loc
+    # Retrieve last display window location coords from "configuration.ini":
+    py5_loc = ','.join( map(str, WORKBENCH.get_option(PY5_LOCATION, ())) )
 
-        # Run command to execute sketch:
-        working_directory = path.dirname(current_file)
-        cd_cmd_line = running.construct_cd_command(working_directory) + '\n'
-        cmd_parts = ['%Run', str(run_sketch), current_file]
-        exe_cmd_line = running.construct_cmd_line(cmd_parts) + ' '
-        exe_cmd_line += py5_switches + '\n'
-        running.get_shell().submit_magic_command(cd_cmd_line + exe_cmd_line)
+    # Add location switch to command line:
+    if py5_loc: py5_switches += ' location=' + py5_loc
+
+    # Run command to execute sketch:
+    working_directory = path.dirname(current_file)
+    cd_cmd_line = running.construct_cd_command(working_directory) + '\n'
+    cmd_parts = ['%Run', str(run_sketch), current_file]
+    exe_cmd_line = running.construct_cmd_line(cmd_parts) + ' '
+    exe_cmd_line += py5_switches + '\n'
+    running.get_shell().submit_magic_command(cd_cmd_line + exe_cmd_line)
 
 
 def color_selector() -> None:
@@ -293,17 +295,23 @@ def patch_token_coloring() -> None:
     token_utils.BUILTIN = r'([^.\'"\\#]\b|^)' + matches + '\\b'
 
 
-def show_sketch_folder() -> None:
-    '''Open the enclosing folder of the current sketch file.'''
+def get_current_filename_and_editor() -> tuple[str, Optional[Editor]]:
+    '''Return a tuple containing current filename and the editor instance.'''
 
     # Check if the editor is empty/blank:
     if not ( editor := WORKBENCH.get_editor_notebook().get_current_editor() ):
-        showwarning(*_NO_FILE, parent=WORKBENCH); return
+        showwarning(*_NO_FILE, parent=WORKBENCH); return '', None
 
     # Check if the file isn't an "<untitled>" (yet-to-be-saved) file:
     if not ( filename := editor.get_filename() ):
-        showwarning(*_NOT_SAVED, parent=WORKBENCH); return
+        showwarning(*_NOT_SAVED, parent=WORKBENCH); return '', editor
 
+    return filename, editor
+
+
+def show_sketch_folder() -> None:
+    '''Open the enclosing folder of the current sketch file.'''
+    filename = get_current_filename_and_editor()[0]
     open_file_manager( path.dirname(filename) ) # Open the OS file manager
 
 
