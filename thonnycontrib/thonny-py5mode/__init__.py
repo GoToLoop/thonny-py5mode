@@ -118,10 +118,6 @@ def load_plugin() -> None:
     cmd('open_folder', 'py5', _MENU.SKETCH_DIR, show_sketch_folder, group=40,
         default_sequence='<Control-j>')
 
-    add_about_py5mode_command(50)
-    patch_token_coloring()
-    set_py5_imported_mode()
-
     # Monkey-patching BaseShellText's `_handle_program_output()` method!
     # It's a non-public API, so its handling may vary across Thonny versions:
     h_p_o = BaseShellText._handle_program_output
@@ -131,6 +127,10 @@ def load_plugin() -> None:
     # Also save Runner's `execute_current()` original method; so it can also be
     # monkey-patched later when toggling py5mode button:
     setattr(Runner, 'original_execute_current', Runner.execute_current)
+
+    add_about_py5mode_command(50)
+    patch_token_coloring()
+    set_py5_imported_mode()
 
 
 def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
@@ -174,12 +174,9 @@ def get_py5mode_toggle_state_variable() -> BooleanVar:
 
 def toggle_py5_imported_mode() -> None:
     '''Toggle py5 imported mode settings.'''
-
     var = get_py5mode_toggle_state_variable()
-    var.set(is_on := not var.get()) # Toggle state of the py5Mode variable
-
-    if is_on: install_jdk() # Only check JDK/JAVA_HOME when toggling on
-    set_py5_imported_mode() # Also toggle Thonny's job runner for py5mode 
+    var.set(not var.get()) # Toggle state of the py5Mode variable
+    set_py5_imported_mode() # Toggle Thonny's runner behavior for py5mode 
 
 
 def set_py5_imported_mode() -> None:
@@ -190,8 +187,9 @@ def set_py5_imported_mode() -> None:
     is_on = get_py5mode_toggle_state_variable().get()
     env['PY5_IMPORTED_MODE'] = str(is_on)
 
-    # Switch on/off py5 run button behavior
-    if is_on: Runner.execute_current = patched_execute_current
+    if is_on: # Switch on/off py5 run button behavior
+        Runner.execute_current = patched_execute_current
+        install_jdk() # Only check JDK/JAVA_HOME when toggling on
         
     # Patched method non-existant when imported mode active at launch:
     else: Runner.execute_current = getattr(Runner, 'original_execute_current')
