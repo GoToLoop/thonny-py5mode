@@ -207,19 +207,24 @@ def execute_imported_mode() -> None:
         running.get_shell().submit_magic_command(cd_cmd_line + exe_cmd_line)
 
 
+def patched_execute_current(self: Runner, command_name: str) -> None:
+    '''Override run button behavior for py5 imported mode.'''
+    execute_imported_mode()
+
+
+def get_py5mode_toggle_state_variable() -> BooleanVar:
+    '''Get the variable keeping py5mode's current toggle button state.'''
+    return cast( BooleanVar, WORKBENCH.get_variable(PY5_IMPORTED_MODE) )
+
+
 def toggle_py5_imported_mode() -> None:
     '''Toggle py5 imported mode settings.'''
 
-    var = cast(BooleanVar, WORKBENCH.get_variable(PY5_IMPORTED_MODE) )
+    var = get_py5mode_toggle_state_variable()
     var.set(is_on := not var.get()) # Toggle state of the py5Mode variable
 
     if is_on: install_jdk() # Only check JDK/JAVA_HOME when toggling on
     set_py5_imported_mode() # Visually apply new py5Mode state
-
-
-def patched_execute_current(self: Runner, command_name: str) -> None:
-    '''Override run button behavior for py5 imported mode.'''
-    execute_imported_mode()
 
 
 def set_py5_imported_mode() -> None:
@@ -227,11 +232,11 @@ def set_py5_imported_mode() -> None:
 
     if WORKBENCH.in_simple_mode(): env['PY5_IMPORTED_MODE'] = 'auto'; return
 
-    p_i_m = str(WORKBENCH.get_option(PY5_IMPORTED_MODE))
-    env['PY5_IMPORTED_MODE'] = p_i_m
+    is_on = get_py5mode_toggle_state_variable().get()
+    env['PY5_IMPORTED_MODE'] = str(is_on)
 
     # Switch on/off py5 run button behavior:
-    if WORKBENCH.get_option(PY5_IMPORTED_MODE):
+    if is_on:
         Runner._original_execute_current = Runner.execute_current
         Runner.execute_current = patched_execute_current
 
