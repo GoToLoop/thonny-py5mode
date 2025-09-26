@@ -119,11 +119,15 @@ def load_plugin() -> None:
     patch_token_coloring()
     set_py5_imported_mode()
 
-    # Monkey-patching internal method `_handle_program_output()`!
+    # Monkey-patching BaseShellText's `_handle_program_output()` method!
     # It's a non-public API, so its handling may vary across Thonny versions:
     h_p_o = BaseShellText._handle_program_output
     setattr(BaseShellText, 'original_handle_program_output', h_p_o)
     BaseShellText._handle_program_output = patched_handle_program_output
+
+    # Also save Runner's `execute_current()` original method; so it can also be
+    # monkey-patched later when toggling py5mode button:
+    setattr(Runner, '_original_execute_current', Runner.execute_current)
 
 
 def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
@@ -160,8 +164,47 @@ def apply_py5_config() -> None:
     WORKBENCH.reload_themes()
 
 
-def execute_imported_mode() -> None:
-    '''Run imported mode script using py5_tools run_sketch.'''
+def get_py5mode_toggle_state_variable() -> BooleanVar:
+    '''Get the variable keeping py5mode's current toggle button state.'''
+    return cast( BooleanVar, WORKBENCH.get_variable(PY5_IMPORTED_MODE) )
+
+
+def toggle_py5_imported_mode() -> None:
+    '''Toggle py5 imported mode settings.'''
+
+    var = get_py5mode_toggle_state_variable()
+    var.set(is_on := not var.get()) # Toggle state of the py5Mode variable
+
+    if is_on: install_jdk() # Only check JDK/JAVA_HOME when toggling on
+    set_py5_imported_mode() # Also toggle Thonny's job runner for py5mode 
+
+
+def set_py5_imported_mode() -> None:
+    '''Set imported mode variable in Thonny's "configuration.ini" file.'''
+
+    if WORKBENCH.in_simple_mode(): env['PY5_IMPORTED_MODE'] = 'auto'; return
+
+    is_on = get_py5mode_toggle_state_variable().get()
+    env['PY5_IMPORTED_MODE'] = str(is_on)
+
+    # Switch on/off py5 run button behavior:
+    if is_on:
+        Runner.execute_current = _patched_execute_current
+
+        # Must restart backend for py5 autocompletion upon installing JDK:
+        try: get_runner().restart_backend(False)
+        except AttributeError: pass
+    else: # Patched method non-existant when imported mode active at launch:
+        try:
+            Runner.execute_current = Runner._original_execute_current
+            # This line disable py5 autocompletion in this instance:
+            get_runner().restart_backend(False)
+        except AttributeError: pass
+
+
+def _patched_execute_current(self: Runner, command_name: str) -> None:
+    '''Override run button behavior to execute the py5 imported mode script via
+    "py5_tools/tools/run_sketch.py".'''
 
     current_editor = WORKBENCH.get_editor_notebook().get_current_editor()
     current_file = current_editor.get_filename()
@@ -205,50 +248,6 @@ def execute_imported_mode() -> None:
         exe_cmd_line = running.construct_cmd_line(cmd_parts) + ' '
         exe_cmd_line += py5_switches + '\n'
         running.get_shell().submit_magic_command(cd_cmd_line + exe_cmd_line)
-
-
-def patched_execute_current(self: Runner, command_name: str) -> None:
-    '''Override run button behavior for py5 imported mode.'''
-    execute_imported_mode()
-
-
-def get_py5mode_toggle_state_variable() -> BooleanVar:
-    '''Get the variable keeping py5mode's current toggle button state.'''
-    return cast( BooleanVar, WORKBENCH.get_variable(PY5_IMPORTED_MODE) )
-
-
-def toggle_py5_imported_mode() -> None:
-    '''Toggle py5 imported mode settings.'''
-
-    var = get_py5mode_toggle_state_variable()
-    var.set(is_on := not var.get()) # Toggle state of the py5Mode variable
-
-    if is_on: install_jdk() # Only check JDK/JAVA_HOME when toggling on
-    set_py5_imported_mode() # Visually apply new py5Mode state
-
-
-def set_py5_imported_mode() -> None:
-    '''Set imported mode variable in Thonny's "configuration.ini" file.'''
-
-    if WORKBENCH.in_simple_mode(): env['PY5_IMPORTED_MODE'] = 'auto'; return
-
-    is_on = get_py5mode_toggle_state_variable().get()
-    env['PY5_IMPORTED_MODE'] = str(is_on)
-
-    # Switch on/off py5 run button behavior:
-    if is_on:
-        Runner._original_execute_current = Runner.execute_current
-        Runner.execute_current = patched_execute_current
-
-        # Must restart backend for py5 autocompletion upon installing JDK:
-        try: get_runner().restart_backend(False)
-        except AttributeError: pass
-    else: # Patched method non-existant when imported mode active at launch:
-        try:
-            Runner.execute_current = Runner._original_execute_current
-            # This line disable py5 autocompletion in this instance:
-            get_runner().restart_backend(False)
-        except AttributeError: pass
 
 
 def color_selector() -> None:
