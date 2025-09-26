@@ -43,6 +43,9 @@ class BackendEvt(BackendEvent, InputSubmission):
     help static analysis tools recognize that a `BackendEvent` instance includes
     both `BackendEvent` attributes and a `data` field of type string.'''
 
+RUNNER = get_runner()
+'''Thonny's running job singleton instance'''
+
 PY5_IMPORTED_MODE = 'run.py5_imported_mode'
 PY5_LOCATION = 'run.py5_location'
 
@@ -127,7 +130,7 @@ def load_plugin() -> None:
 
     # Also save Runner's `execute_current()` original method; so it can also be
     # monkey-patched later when toggling py5mode button:
-    setattr(Runner, '_original_execute_current', Runner.execute_current)
+    setattr(Runner, 'original_execute_current', Runner.execute_current)
 
 
 def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
@@ -187,22 +190,18 @@ def set_py5_imported_mode() -> None:
     is_on = get_py5mode_toggle_state_variable().get()
     env['PY5_IMPORTED_MODE'] = str(is_on)
 
-    # Switch on/off py5 run button behavior:
-    if is_on:
-        Runner.execute_current = _patched_execute_current
-
+    if is_on: # Switch on/off py5 run button behavior
+        Runner.execute_current = patched_execute_current
         # Must restart backend for py5 autocompletion upon installing JDK:
-        try: get_runner().restart_backend(False)
-        except AttributeError: pass
+        if (runner := get_runner()): runner.restart_backend(False)
+
     else: # Patched method non-existant when imported mode active at launch:
-        try:
-            Runner.execute_current = Runner._original_execute_current
-            # This line disable py5 autocompletion in this instance:
-            get_runner().restart_backend(False)
-        except AttributeError: pass
+        Runner.execute_current = getattr(Runner, 'original_execute_current')
+        # This line disables py5 autocompletion in this instance:
+        if (runner := get_runner()): runner.restart_backend(False)
 
 
-def _patched_execute_current(self: Runner, command_name: str) -> None:
+def patched_execute_current(self: Runner, command_name: str) -> None:
     '''Override run button behavior to execute the py5 imported mode script via
     "py5_tools/tools/run_sketch.py".'''
 
