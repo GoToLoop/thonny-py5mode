@@ -11,6 +11,7 @@ from importlib import machinery, util
 from subprocess import Popen
 from sysconfig import get_path
 
+from tkinter import BooleanVar
 from tkinter.messagebox import showwarning
 
 from types import ModuleType
@@ -92,6 +93,57 @@ def open_web_pdf(): webbrowser.open(_WEB_PDF) # Online py5 PDF cheatsheet
 
 _is_color_selector_open = False
 
+def load_plugin() -> None:
+    '''Thonny's plugin callback.'''
+
+    WORKBENCH.set_default(PY5_IMPORTED_MODE, False)
+
+    cmd = WORKBENCH.add_command
+
+    cmd('toggle', 'py5', _MENU.TOGGLE_PY5, toggle_py5_imported_mode, group=10,
+        flag_name=PY5_IMPORTED_MODE)
+
+    cmd('apply_py5_theme', 'py5', _MENU.P5_THEME, apply_py5_config, group=20)
+
+    cmd('color_selector', 'py5', _MENU.COLOR_PICKER, color_selector, group=25,
+        default_sequence='<Alt-c>')
+
+    cmd('py5_reference', 'py5', _MENU.PY5_REF, open_web_ref, group=30)
+
+    cmd('py5_quick_reference', 'py5', _MENU.PY5_PDF, open_web_pdf, group=30)
+
+    cmd('open_folder', 'py5', _MENU.SKETCH_DIR, show_sketch_folder, group=40,
+        default_sequence='<Control-j>')
+
+    add_about_py5mode_command(50)
+    patch_token_coloring()
+    set_py5_imported_mode()
+
+    # Monkey-patching internal method `_handle_program_output()`!
+    # It's a non-public API, so its handling may vary across Thonny versions:
+    h_p_o = BaseShellText._handle_program_output
+    setattr(BaseShellText, 'original_handle_program_output', h_p_o)
+    BaseShellText._handle_program_output = patched_handle_program_output
+
+
+def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
+    '''Catch display window movement events and store their coordinate pair in
+    the config file. Forward other event types to the original method.'''
+
+    # If the message isn't a window move event, delegate to the original handler
+    # for shell logging as usual:
+    if not msg.data.startswith(_MOVE_EVENT_NAME):
+        return getattr(self, 'original_handle_program_output')(msg)
+
+    # Extract the coordinate pair from the received message representing
+    # Processing canvas' last location, and convert it to the CSV format:
+    py5_loc = msg.data[_EXTRACT_MOVE_COORDS].replace(' ', ',') # "x,y"
+
+    # Next, save it to the [run] section of file "configuration.ini" as key
+    # 'py5_location', to be later used to set Processing's canvas location:
+    WORKBENCH.set_option(PY5_LOCATION, py5_loc)
+
+
 def apply_py5_config() -> None:
     '''Apply recommended py5 theme, syntax and settings for Thonny.'''
 
@@ -155,46 +207,43 @@ def execute_imported_mode() -> None:
         running.get_shell().submit_magic_command(cd_cmd_line + exe_cmd_line)
 
 
+def toggle_py5_imported_mode() -> None:
+    '''Toggle py5 imported mode settings.'''
+
+    var = cast(BooleanVar, WORKBENCH.get_variable(PY5_IMPORTED_MODE) )
+    var.set(is_on := not var.get()) # Toggle state of the py5Mode variable
+
+    if is_on: install_jdk() # Only check JDK/JAVA_HOME when toggling on
+    set_py5_imported_mode() # Visually apply new py5Mode state
+
+
 def patched_execute_current(self: Runner, command_name: str) -> None:
     '''Override run button behavior for py5 imported mode.'''
     execute_imported_mode()
 
 
 def set_py5_imported_mode() -> None:
-    '''Set imported mode variable in thonny configuration.ini file.'''
+    '''Set imported mode variable in Thonny's "configuration.ini" file.'''
 
-    if WORKBENCH.in_simple_mode():
-        env["PY5_IMPORTED_MODE"] = "auto"
-    else:
-        p_i_m = str(WORKBENCH.get_option(PY5_IMPORTED_MODE))
-        env["PY5_IMPORTED_MODE"] = p_i_m
+    if WORKBENCH.in_simple_mode(): env['PY5_IMPORTED_MODE'] = 'auto'; return
 
-        # Switch on/off py5 run button behavior:
-        if WORKBENCH.get_option(PY5_IMPORTED_MODE):
-            Runner._original_execute_current = Runner.execute_current
-            Runner.execute_current = patched_execute_current
-            # Must restart backend for py5 autocompletion upon installing JDK:
-            try:
-                get_runner().restart_backend(False)
-            except AttributeError:
-                pass
-        else:
-            # Patched method non-existant when imported mode active at launch:
-            try:
-                Runner.execute_current = Runner._original_execute_current
-                # This line disable py5 autocompletion in this instance:
-                get_runner().restart_backend(False)
-            except AttributeError:
-                pass
+    p_i_m = str(WORKBENCH.get_option(PY5_IMPORTED_MODE))
+    env['PY5_IMPORTED_MODE'] = p_i_m
 
+    # Switch on/off py5 run button behavior:
+    if WORKBENCH.get_option(PY5_IMPORTED_MODE):
+        Runner._original_execute_current = Runner.execute_current
+        Runner.execute_current = patched_execute_current
 
-def toggle_py5_imported_mode() -> None:
-    '''Toggle py5 imported mode settings.'''
-
-    var = WORKBENCH.get_variable(PY5_IMPORTED_MODE)
-    var.set(not var.get())
-    install_jdk()
-    set_py5_imported_mode()
+        # Must restart backend for py5 autocompletion upon installing JDK:
+        try: get_runner().restart_backend(False)
+        except AttributeError: pass
+    else: # Patched method non-existant when imported mode active at launch:
+        try:
+            Runner.execute_current = Runner._original_execute_current
+            # This line disable py5 autocompletion in this instance:
+            get_runner().restart_backend(False)
+        except AttributeError: pass
 
 
 def color_selector() -> None:
@@ -227,7 +276,7 @@ def patch_token_coloring() -> None:
     # Concatenate py5/Processing API to Thonny's builtin list:
     extended_builtin = token_utils._builtinlist + py5_api
 
-    # Make the extended API keywords Thonny's new syntax highlighting:
+    # Make the extended API tokens Thonny's new syntax highlighting:
     matches = cast( str, token_utils.matches_any('builtin', extended_builtin) )
     token_utils.BUILTIN = r'([^.\'"\\#]\b|^)' + matches + '\\b'
 
@@ -254,54 +303,3 @@ def open_file_manager(path_dir: StrPath) -> None:
     else: file_manager = 'xdg-open' # Linux/Unix
 
     Popen( (file_manager, path_dir) )
-
-
-def patched_handle_program_output(self: BaseShellText, msg: BackendEvt) -> None:
-    '''Catch display window movement events and store their coordinate pair in
-    the config file. Forward other event types to the original method.'''
-
-    # If the message isn't a window move event, delegate to the original handler
-    # for shell logging as usual:
-    if not msg.data.startswith(_MOVE_EVENT_NAME):
-        return getattr(self, 'original_handle_program_output')(msg)
-
-    # Extract the coordinate pair from the received message representing
-    # Processing canvas' last location, and convert it to the CSV format:
-    py5_loc = msg.data[_EXTRACT_MOVE_COORDS].replace(' ', ',') # "x,y"
-
-    # Next, save it to the [run] section of file "configuration.ini" as key
-    # 'py5_location', to be later used to set Processing's canvas location:
-    WORKBENCH.set_option(PY5_LOCATION, py5_loc)
-
-
-def load_plugin() -> None:
-    '''Thonny's plugin callback.'''
-
-    WORKBENCH.set_default(PY5_IMPORTED_MODE, False)
-
-    cmd = WORKBENCH.add_command
-
-    cmd('toggle', 'py5', _MENU.TOGGLE_PY5, toggle_py5_imported_mode, group=10,
-        flag_name=PY5_IMPORTED_MODE)
-
-    cmd('apply_py5_theme', 'py5', _MENU.P5_THEME, apply_py5_config, group=20)
-
-    cmd('color_selector', 'py5', _MENU.COLOR_PICKER, color_selector, group=25,
-        default_sequence='<Alt-c>')
-
-    cmd('py5_reference', 'py5', _MENU.PY5_REF, open_web_ref, group=30)
-
-    cmd('py5_quick_reference', 'py5', _MENU.PY5_PDF, open_web_pdf, group=30)
-
-    cmd('open_folder', 'py5', _MENU.SKETCH_DIR, show_sketch_folder, group=40,
-        default_sequence='<Control-j>')
-
-    add_about_py5mode_command(50)
-    patch_token_coloring()
-    set_py5_imported_mode()
-
-    # Monkey-patching internal method `_handle_program_output()`!
-    # It's a non-public API, so its handling may vary across Thonny versions:
-    h_p_o = BaseShellText._handle_program_output
-    setattr(BaseShellText, 'original_handle_program_output', h_p_o)
-    BaseShellText._handle_program_output = patched_handle_program_output
