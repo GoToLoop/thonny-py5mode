@@ -104,7 +104,7 @@ def load_plugin() -> None:
     monkey_patchings()
     add_about_py5mode_command(50)
     patch_token_coloring()
-    set_py5_imported_mode() # Check JDK if Thonny is opened w/ py5mode active 
+    set_py5_imported_mode() # Check JDK if Thonny is opened w/ py5mode active
 
 
 def create_py5_menu() -> None:
@@ -186,7 +186,7 @@ def toggle_py5_imported_mode() -> None:
     '''Toggle py5 imported mode settings.'''
     var = get_py5mode_toggle_state_variable()
     var.set(not var.get()) # Toggle state of the py5Mode variable
-    set_py5_imported_mode() # Toggle Thonny's runner behavior for py5mode 
+    set_py5_imported_mode() # Toggle Thonny's runner behavior for py5mode
 
 
 def set_py5_imported_mode() -> None:
@@ -200,7 +200,7 @@ def set_py5_imported_mode() -> None:
     if is_on: # Switch on/off py5 run button behavior
         Runner.execute_current = patched_execute_current
         install_jdk() # Only check JDK/JAVA_HOME when toggling on
-        
+
     # Patched method non-existant when imported mode active at launch:
     else: Runner.execute_current = getattr(Runner, 'original_execute_current')
 
