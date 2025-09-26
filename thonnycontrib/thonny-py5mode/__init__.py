@@ -225,10 +225,10 @@ def patch_token_coloring() -> None:
     py5_api: list[str] = getattr(module, 'PY5_ALL_STR')
 
     # Concatenate py5/Processing API to Thonny's builtin list:
-    extended_builtinlist = token_utils._builtinlist + py5_api
+    extended_builtin = token_utils._builtinlist + py5_api
 
     # Make the extended API keywords Thonny's new syntax highlighting:
-    matches = token_utils.matches_any('builtin', extended_builtinlist)
+    matches = cast( str, token_utils.matches_any('builtin', extended_builtin) )
     token_utils.BUILTIN = r'([^.\'"\\#]\b|^)' + matches + '\\b'
 
 
