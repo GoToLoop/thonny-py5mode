@@ -228,19 +228,25 @@ def patched_execute_current(self: Runner, command_name: str) -> None:
     # Save and run py5 imported mode:
     current_editor.save_file()
 
-    user_packages = str(site.getusersitepackages())
-    site_packages = str(site.getsitepackages()[0])
-    plug_packages = util.find_spec('py5_tools').submodule_search_locations
+    # Checks to satisfy the linter. 'py5_tools' module is assured to be found:
+    if not ( spec := util.find_spec('py5_tools') ): return
+    if not ( locations := spec.submodule_search_locations ): return
+
+    user_packages = site.getusersitepackages()
+    site_packages = site.getsitepackages()[0]
+    plug_packages = locations[0]
 
     run_sketch_locations = (
         Path(user_packages + '/py5_tools/tools/run_sketch.py'),
         Path(site_packages + '/py5_tools/tools/run_sketch.py'),
-        Path(plug_packages[0] + '/tools/run_sketch.py'),
+        Path(plug_packages + '/tools/run_sketch.py'),
         Path(get_path('purelib') + '/py5_tools/tools/run_sketch.py') )
+
+    run_sketch = ''
 
     for location in run_sketch_locations:
         # If location matches py5_tools path, use it:
-        if location.is_file(): run_sketch = location; break
+        if location.is_file(): run_sketch = str(location); break
 
     # Set switch so Sketch will report window location:
     py5_switches = '--py5_options external'
@@ -254,7 +260,7 @@ def patched_execute_current(self: Runner, command_name: str) -> None:
     # Run command to execute sketch:
     working_directory = path.dirname(current_file)
     cd_cmd_line = running.construct_cd_command(working_directory) + '\n'
-    cmd_parts = ['%Run', str(run_sketch), current_file]
+    cmd_parts = ['%Run', run_sketch, current_file]
     exe_cmd_line = running.construct_cmd_line(cmd_parts) + ' '
     exe_cmd_line += py5_switches + '\n'
     running.get_shell().submit_magic_command(cd_cmd_line + exe_cmd_line)
