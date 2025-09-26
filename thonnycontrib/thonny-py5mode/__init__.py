@@ -211,7 +211,7 @@ def color_selector() -> None:
 def patch_token_coloring() -> None:
     '''Add py5 keywords to syntax highlighting.'''
 
-    # Early-return if 'py5_tools' module isn't found:
+    # Checks to satisfy the linter. 'py5_tools' module is assured to be found:
     if not ( spec := util.find_spec('py5_tools') ): return
     if not ( locations := spec.submodule_search_locations ): return
 
@@ -221,8 +221,13 @@ def patch_token_coloring() -> None:
     module = ModuleType(loader.name)
     loader.exec_module(module)
 
-    # Concatenate py5/Processing keywords to Thonny's builtin list:
-    extended_builtinlist = token_utils._builtinlist + module.PY5_ALL_STR
+    # Get list containing all py5/Processing public API keywords:
+    py5_api: list[str] = getattr(module, 'PY5_ALL_STR')
+
+    # Concatenate py5/Processing API to Thonny's builtin list:
+    extended_builtinlist = token_utils._builtinlist + py5_api
+
+    # Make the extended API keywords Thonny's new syntax highlighting:
     matches = token_utils.matches_any('builtin', extended_builtinlist)
     token_utils.BUILTIN = r'([^.\'"\\#]\b|^)' + matches + '\\b'
 
