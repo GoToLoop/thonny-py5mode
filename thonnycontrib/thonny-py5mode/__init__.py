@@ -26,6 +26,7 @@ from thonny.editors import Editor
 from thonny.languages import tr
 from thonny.running import Runner
 from thonny.shell import BaseShellText
+from thonny.ui_utils import select_sequence
 
 # 3. Local plugin modules:
 from .about_plugin import add_about_py5mode_command
@@ -43,9 +44,6 @@ class BackendEvt(BackendEvent, InputSubmission):
     This class adds no behavior or structure beyond typing. It exists solely to
     help static analysis tools recognize that a `BackendEvent` instance includes
     both `BackendEvent` attributes and a `data` field of type string.'''
-
-RUNNER = get_runner()
-'''Thonny's running job singleton instance'''
 
 PY5_IMPORTED_MODE = 'run.py5_imported_mode'
 PY5_LOCATION = 'run.py5_location'
@@ -75,6 +73,17 @@ NamedTuple containing UI translated labels for plugin py5mode related features:
 - PY5_REF: Label for accessing the py5 reference.
 - PY5_PDF: Label for viewing the py5 quick reference PDF.
 - SKETCH_DIR: Label for showing the sketch folder.'''
+
+_KEY_COMBOS = NamedTuple('Py5KeySequence', ( # Define all fields as type str
+    ('TOGGLE_PY5', str),
+    ('SKETCH_DIR', str) ))(*map(lambda os_keys: select_sequence(*os_keys), (
+        ('<Control-J>', '<Command-J>'),
+        ('<Control-j>', '<Command-j>')) ))
+'''
+NamedTuple of os-specific keyboard shortcuts for some items on the py5mode menu:
+
+- TOGGLE_PY5: Shortcut to toggle py5 imported mode (Ctrl/Cmd + Shift + J).
+- SKETCH_DIR: Shortcut to show the sketch folder (Ctrl/Cmd + J).'''
 
 _NO_FILE = cast( tuple[str, str], tuple(map(tr, (
     'Editor is empty!', 'Do you have any file open in the editor now?'))) )
@@ -114,7 +123,7 @@ def create_py5_menu() -> None:
     cmd = WORKBENCH.add_command
 
     cmd('toggle', 'py5', _MENU.TOGGLE_PY5, toggle_py5_imported_mode, group=10,
-        default_sequence='<Control-J>', flag_name=PY5_IMPORTED_MODE)
+        default_sequence=_KEY_COMBOS.TOGGLE_PY5, flag_name=PY5_IMPORTED_MODE)
 
     cmd('apply_py5_theme', 'py5', _MENU.P5_THEME, apply_py5_config, group=20)
 
@@ -126,7 +135,7 @@ def create_py5_menu() -> None:
     cmd('py5_quick_reference', 'py5', _MENU.PY5_PDF, open_web_pdf, group=30)
 
     cmd('open_folder', 'py5', _MENU.SKETCH_DIR, show_sketch_folder, group=40,
-        default_sequence='<Control-j>')
+        default_sequence=_KEY_COMBOS.SKETCH_DIR)
 
 
 def monkey_patchings() -> None:
@@ -185,21 +194,24 @@ def get_py5mode_toggle_state_variable() -> BooleanVar:
 def toggle_py5_imported_mode() -> None:
     '''Toggle py5 imported mode settings.'''
     var = get_py5mode_toggle_state_variable()
-    var.set(not var.get()) # Toggle state of the py5Mode variable
+    var.set(not var.get())  # Toggle state of the py5Mode variable
     set_py5_imported_mode() # Toggle Thonny's runner behavior for py5mode
 
 
 def set_py5_imported_mode() -> None:
     '''Set imported mode variable in Thonny's "configuration.ini" file.'''
 
-    if WORKBENCH.in_simple_mode(): env['PY5_IMPORTED_MODE'] = 'auto'; return
+    if WORKBENCH.in_simple_mode():
+        env['PY5_IMPORTED_MODE'] = 'auto'
+        install_jdk() # Check JDK/JAVA_HOME when in simple mode
+        return
 
     is_on = get_py5mode_toggle_state_variable().get()
     env['PY5_IMPORTED_MODE'] = str(is_on)
 
     if is_on: # Switch on/off py5 run button behavior
         Runner.execute_current = patched_execute_current
-        install_jdk() # Only check JDK/JAVA_HOME when toggling on
+        install_jdk() # Check JDK/JAVA_HOME when toggling on, but not off
 
     # Patched method non-existant when imported mode active at launch:
     else: Runner.execute_current = getattr(Runner, 'original_execute_current')
