@@ -221,6 +221,12 @@ def set_py5_imported_mode() -> None:
     if (runner := get_runner()): runner.restart_backend(False)
 
 
+def get_module_first_location(module='py5_tools') -> str:
+    '''Get 1st found path for module. Return an empty string on fail.'''
+    if not ( spec := util.find_spec(module) ): return ''
+    return paths[0] if (paths := spec.submodule_search_locations) else ''
+
+
 def patched_execute_current(self: Runner, command_name: str) -> None:
     '''Override run button behavior to execute the py5 imported mode script via
     "py5_tools/tools/run_sketch.py".'''
@@ -246,7 +252,7 @@ def patched_execute_current(self: Runner, command_name: str) -> None:
 
     user_packages = site.getusersitepackages()
     site_packages = site.getsitepackages()[0]
-    plug_packages = locations[0]
+    plug_packages = get_module_first_location()
 
     run_sketch_locations = (
         Path(user_packages + '/py5_tools/tools/run_sketch.py'),
@@ -292,12 +298,8 @@ def color_selector() -> None:
 def patch_token_coloring() -> None:
     '''Add py5 keywords to syntax highlighting.'''
 
-    # Checks to satisfy the linter. 'py5_tools' module is assured to be found:
-    if not ( spec := util.find_spec('py5_tools') ): return
-    if not ( locations := spec.submodule_search_locations ): return
-
     # Can't use `dir(py5)` b/c of JVM check; hence loading instead of importing:
-    py5_ref_path = str( PurePath(locations[0], 'reference.py') )
+    py5_ref_path = str( PurePath(get_module_first_location(), 'reference.py') )
     loader = machinery.SourceFileLoader('py5_tools_reference', py5_ref_path)
     module = ModuleType(loader.name)
     loader.exec_module(module)
