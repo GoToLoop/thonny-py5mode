@@ -3,6 +3,7 @@ interacts with py5mode backend (backend > py5_imported_mode_backend.py).'''
 
 # 1. Built-in modules:
 import site, webbrowser
+from functools import cache
 
 from os import path, environ as env
 from pathlib import Path, PurePath
@@ -221,9 +222,10 @@ def set_py5_imported_mode() -> None:
     if (runner := get_runner()): runner.restart_backend(False)
 
 
-def get_module_first_location(module='py5_tools') -> str:
+@cache
+def get_module_first_location(module_name='py5_tools') -> str:
     '''Get 1st found path for module. Return an empty string on fail.'''
-    if not ( spec := util.find_spec(module) ): return ''
+    if not ( spec := util.find_spec(module_name) ): return ''
     return paths[0] if (paths := spec.submodule_search_locations) else ''
 
 
@@ -245,10 +247,6 @@ def patched_execute_current(self: Runner, command_name: str) -> None:
 
     # Save and run py5 imported mode:
     current_editor.save_file()
-
-    # Checks to satisfy the linter. 'py5_tools' module is assured to be found:
-    if not ( spec := util.find_spec('py5_tools') ): return
-    if not ( locations := spec.submodule_search_locations ): return
 
     user_packages = site.getusersitepackages()
     site_packages = site.getsitepackages()[0]
