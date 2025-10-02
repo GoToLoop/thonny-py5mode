@@ -50,7 +50,10 @@ PY5_IMPORTED_MODE = 'run.py5_imported_mode'
 PY5_LOCATION = 'run.py5_location'
 
 _MOVE_EVENT_NAME = '__MOVE__ '
+'''Internal event name prefix for move operations.'''
+
 _EXTRACT_MOVE_COORDS = slice(len(_MOVE_EVENT_NAME), -1)
+'''Slice object to extract coordinate data from move event strings.'''
 
 _MENU = NamedTuple('Py5Menu', ( # Define all fields as type str
     ('TOGGLE_PY5', str),
@@ -88,25 +91,29 @@ NamedTuple of os-specific keyboard shortcuts for some items on the py5mode menu:
 
 _NO_FILE = cast( tuple[str, str], tuple(map(tr, (
     'Editor is empty!', 'Do you have any file open in the editor now?'))) )
+'''Translated error message tuple for when no file is open in editor.'''
 
 _NOT_SAVED = cast( tuple[str, str], tuple(map(tr, (
     'Inexisting file!', 'Have you saved this code anywhere yet?'))) )
-
-_TITLE, _MSG = map(tr, ('py5 Conversion', 'Conversion complete'))
+'''Translated error message tuple for when file hasn't been saved.'''
 
 _EXTS = 'py', 'py5', 'pyde'
+'''Supported file extensions for py5 sketches.'''
 
 _HTTP, _PY5_SITE, _REF = 'https://', 'py5Coding', '.org/reference/'
 _WEB_REF = _HTTP + _PY5_SITE + _REF
+'''Complete URL for the py5 online API reference.'''
 
 _GIT_RAW = _HTTP + 'raw.GitHubUserContent.com/'
 _REF_PDF = _PY5_SITE + '/thonny-py5mode/main/assets/py5_quick_reference.pdf'
 _WEB_PDF = _GIT_RAW + _REF_PDF
+'''Complete URL for the py5 quick reference PDF.'''
 
 def open_web_ref(): webbrowser.open(_WEB_REF) # Online py5 API reference
 def open_web_pdf(): webbrowser.open(_WEB_PDF) # Online py5 PDF cheatsheet
 
 _is_color_selector_open = False
+'''Flag to track whether the color selector window is currently open.'''
 
 def load_plugin() -> None:
     '''Thonny's plugin callback.'''
@@ -214,7 +221,7 @@ def set_py5_imported_mode() -> None:
         Runner.execute_current = patched_execute_current
         install_jdk() # Check JDK/JAVA_HOME when toggling on, but not off
 
-    # Patched method non-existant when imported mode active at launch:
+    # Restore the original method when py5mode is off:
     else: Runner.execute_current = getattr(Runner, 'original_execute_current')
 
     # Must restart backend for py5 autocompletion upon installing JDK.
